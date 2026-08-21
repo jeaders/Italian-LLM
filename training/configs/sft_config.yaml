@@ -1,0 +1,28 @@
+model_name: "mistralai/Mistral-7B-v0.3"
+dataset_name: "username/italian-instructions-dataset"
+output_dir: "./models/adapter/italian-llm-7b"
+max_seq_length: 2048
+
+training:
+  epochs: 3
+  batch_size: 4
+  gradient_accumulation: 4
+  learning_rate: 2e-4
+  warmup_steps: 100
+  logging_steps: 10
+  save_steps: 500
+
+lora:
+  r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  target_modules:
+    - "q_proj"
+    - "k_proj"
+    - "v_proj"
+    - "o_proj"
+    - "gate_proj"
+    - "up_proj"
+    - "down_proj"
+
+use_wandb: false

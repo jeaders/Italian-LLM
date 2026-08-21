@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  api:
+    build: ./deploy
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_PATH=/app/models/merged
+      - EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+      - CHROMA_DB_PATH=/app/data/embeddings/chroma
+      - HF_TOKEN=${HF_TOKEN}
+    volumes:
+      - ./models/merged:/app/models/merged:ro
+      - ./data:/app/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./data/embeddings/chroma:/chroma/chroma
+    restart: unless-stopped
+
+  frontend:
+    build: ./deploy/frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://api:8000
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # Ollama for local inference (optional)
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./models:/root/.ollama/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+networks:
+  default:
+    name: italian-llm-network
