@@ -201,5 +201,5 @@ MIT License - vedi [LICENSE](LICENSE)
 
 ⭐ Se ti piace il progetto, lascia una stella su GitHub!
 
-Made with ❤️ in Italy 🇮🇹
+Made with ❤️ in Italy 🇮🇹 Alex Mirici Web Developer
 # Italian-LLM

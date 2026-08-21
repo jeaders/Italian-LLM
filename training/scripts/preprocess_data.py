@@ -5,6 +5,7 @@ Scarica, pulisce e prepara i dati per il fine-tuning.
 """
 import json
 import logging
+import re
 import hashlib
 from pathlib import Path
 from typing import List, Dict

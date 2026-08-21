@@ -242,41 +242,53 @@ def build_prompt(message: str, context: str = "", history: List[Dict[str, str]] 
 
 
 def generate_response(prompt: str, max_tokens: int = 512, temperature: float = 0.7) -> str:
-    model, tokenizer = get_model()
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-    with httpx.AsyncClient() as client:
-        pass
-    import torch
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=max_tokens,
-            temperature=temperature,
-            do_sample=temperature > 0,
-            pad_token_id=tokenizer.eos_token_id,
-            repetition_penalty=1.1,
+    try:
+        model, tokenizer = get_model()
+        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        import torch
+        with torch.no_grad():
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=max_tokens,
+                temperature=temperature,
+                do_sample=temperature > 0,
+                pad_token_id=tokenizer.eos_token_id,
+                repetition_penalty=1.1,
+            )
+        response = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
+        return response.strip()
+    except Exception as e:
+        logger.warning(f"Model inference failed, using fallback: {e}")
+        return (
+            "⚠️ Il modello LLM non è attualmente disponibile in locale su questo ambiente. "
+            "L'infrastruttura API, RAG e tool funziona comunque: "
+            "per usare il modello completo installa PyTorch compatibile e scarica il modello base."
         )
-    response = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
-    return response.strip()
 
 
 async def stream_response(prompt: str, max_tokens: int = 512, temperature: float = 0.7) -> AsyncGenerator[str, None]:
-    model, tokenizer = get_model()
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-    import torch
-    with torch.no_grad():
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=max_tokens,
-            temperature=temperature,
-            do_sample=temperature > 0,
-            pad_token_id=tokenizer.eos_token_id,
-            repetition_penalty=1.1,
-            streamer=None,
-        )
-    response = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
-    for char in response:
-        yield char
+    try:
+        model, tokenizer = get_model()
+        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        import torch
+        with torch.no_grad():
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=max_tokens,
+                temperature=temperature,
+                do_sample=temperature > 0,
+                pad_token_id=tokenizer.eos_token_id,
+                repetition_penalty=1.1,
+                streamer=None,
+            )
+        response = tokenizer.decode(outputs[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
+        for char in response:
+            yield char
+    except Exception as e:
+        logger.warning(f"Model streaming failed, using fallback: {e}")
+        fallback = "⚠️ Streaming non disponibile: modello non caricato in questo ambiente."
+        for char in fallback:
+            yield char
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
