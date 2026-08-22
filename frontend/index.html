@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Italian LLM</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .chat-scroll::-webkit-scrollbar { width: 8px; }
+    .chat-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 8px; }
+    .typing-dot { animation: bounce 1.4s infinite ease-in-out both; }
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-screen flex overflow-hidden">
+  <aside id="sidebar" class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col hidden md:flex">
+    <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+      <div class="font-semibold text-brand-400">🇮🇹 Italian LLM</div>
+      <button id="newChat" class="text-xs bg-brand-600 hover:bg-brand-500 text-white px-2 py-1 rounded">Nuova chat</button>
+    </div>
+    <div id="history" class="flex-1 overflow-y-auto chat-scroll p-2 space-y-1"></div>
+    <div class="p-3 border-t border-slate-800 text-xs text-slate-400">
+      Backend: <span id="apiStatus" class="text-slate-300">-</span>
+    </div>
+  </aside>
+
+  <main class="flex-1 flex flex-col min-w-0">
+    <header class="h-14 border-b border-slate-800 flex items-center px-4 gap-3">
+      <button id="toggleSidebar" class="md:hidden text-slate-300 hover:text-white">☰</button>
+      <div class="font-medium">Chat</div>
+      <div class="ml-auto flex items-center gap-2 text-xs text-slate-400">
+        <span id="backendLabel" class="hidden md:inline">Backend: -</span>
+        <span id="toolBadge" class="hidden px-2 py-0.5 rounded bg-slate-800 text-slate-200"></span>
+      </div>
+    </header>
+
+    <div id="chat" class="flex-1 overflow-y-auto chat-scroll">
+      <div id="emptyState" class="h-full flex flex-col items-center justify-center text-slate-400 gap-2 p-6 text-center">
+        <div class="text-4xl">🇮🇹</div>
+        <div class="text-lg font-medium text-slate-200">Italian LLM</div>
+        <div>Chiedi qualsiasi cosa in italiano.</div>
+        <div class="text-xs text-slate-500">Es: "Spiega la relatività generale", "Calcola 128×56", "Che ore sono?"</div>
+      </div>
+    </div>
+
+    <div class="p-3 border-t border-slate-800 bg-slate-900/60">
+      <div class="flex flex-wrap items-center gap-2 mb-2">
+        <label class="flex items-center gap-2 text-sm text-slate-300">
+          <input id="webSearch" type="checkbox" class="accent-brand-500" /> Ricerca web
+        </label>
+        <label class="flex items-center gap-2 text-sm text-slate-300">
+          <input id="useRag" type="checkbox" class="accent-brand-500" /> RAG
+        </label>
+        <label class="flex items-center gap-2 text-sm text-slate-300">
+          Temperatura
+          <input id="temperature" type="number" step="0.1" min="0" max="1.5" value="0.7" class="w-16 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200" />
+        </label>
+      </div>
+      <form id="chatForm" class="flex gap-2">
+        <input id="message" type="text" placeholder="Scrivi un messaggio..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-brand-500" />
+        <button type="submit" id="sendBtn" class="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white px-4 py-2 rounded-xl">Invia</button>
+      </form>
+    </div>
+  </main>
+
+  <script>
+    const API_BASE = (location.protocol === 'https:' ? 'https://' : 'http://') + location.hostname + ':8000';
+    const chatEl = document.getElementById('chat');
+    const emptyState = document.getElementById('emptyState');
+    const form = document.getElementById('chatForm');
+    const input = document.getElementById('message');
+    const sendBtn = document.getElementById('sendBtn');
+    const apiStatus = document.getElementById('apiStatus');
+    const backendLabel = document.getElementById('backendLabel');
+    const toolBadge = document.getElementById('toolBadge');
+    const historyEl = document.getElementById('history');
+
+    let conversationId = 'default';
+    let conversations = {};
+
+    function saveConversation(id, history) {
+      conversations[id] = history;
+      renderHistory();
+    }
+
+    function renderHistory() {
+      historyEl.innerHTML = '';
+      Object.keys(conversations).forEach(id => {
+        const item = document.createElement('button');
+        item.className = 'w-full text-left px-3 py-2 rounded-lg bg-slate-800/40 hover:bg-slate-800 text-sm text-slate-200 truncate';
+        item.textContent = conversations[id][0]?.user || 'Nuova chat';
+        item.onclick = () => loadConversation(id);
+        historyEl.appendChild(item);
+      });
+    }
+
+    function loadConversation(id) {
+      conversationId = id;
+    }
+
+    function appendBubble(role, text, meta = {}) {
+      if (emptyState) emptyState.style.display = 'none';
+      const row = document.createElement('div');
+      row.className = `max-w-3xl mx-auto w-full px-4 py-3 ${role === 'user' ? 'flex justify-end' : 'flex justify-start'}`;
+      const bubble = document.createElement('div');
+      bubble.className = `max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${role === 'user' ? 'bg-brand-600 text-white rounded-br-sm' : 'bg-slate-800 text-slate-100 rounded-bl-sm border border-slate-700'}`;
+      bubble.textContent = text;
+      row.appendChild(bubble);
+
+      if (meta.tools_used && meta.tools_used.length) {
+        const tools = document.createElement('div');
+        tools.className = 'mt-1 flex flex-wrap gap-1 ' + (role === 'user' ? 'justify-end' : 'justify-start');
+        tools.innerHTML = meta.tools_used.map(t => `<span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-700 text-slate-200">${t}</span>`).join('');
+        row.appendChild(tools);
+      }
+      if (meta.sources && meta.sources.length) {
+        const sources = document.createElement('div');
+        sources.className = 'mt-2 text-xs text-slate-400 ' + (role === 'user' ? 'text-right' : 'text-left');
+        sources.textContent = '📚 Fonti: ' + meta.sources.slice(0,3).map(s => s.substring(0, 60)).join(' | ');
+        row.appendChild(sources);
+      }
+      chatEl.appendChild(row);
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    function typingIndicator() {
+      const row = document.createElement('div');
+      row.id = 'typingIndicator';
+      row.className = 'max-w-3xl mx-auto w-full px-4 py-3 flex justify-start';
+      row.innerHTML = '<div class="bg-slate-800 border border-slate-700 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center"><div class="typing-dot w-2 h-2 bg-slate-400 rounded-full"></div><div class="typing-dot w-2 h-2 bg-slate-400 rounded-full"></div><div class="typing-dot w-2 h-2 bg-slate-400 rounded-full"></div></div>';
+      chatEl.appendChild(row);
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    function removeTypingIndicator() {
+      const el = document.getElementById('typingIndicator');
+      if (el) el.remove();
+    }
+
+    async function checkHealth() {
+      try {
+        const res = await fetch(API_BASE + '/health');
+        const data = await res.json();
+        apiStatus.textContent = data.status === 'healthy' ? 'online' : 'degraded';
+        backendLabel.textContent = 'Backend: ' + (data.backend || '-');
+        apiStatus.className = data.status === 'healthy' ? 'text-emerald-400' : 'text-amber-400';
+      } catch (e) {
+        apiStatus.textContent = 'offline';
+        backendLabel.textContent = 'Backend: -';
+        apiStatus.className = 'text-red-400';
+      }
+    }
+
+    async function sendMessage(text) {
+      const message = text || input.value.trim();
+      if (!message) return;
+      input.value = '';
+      sendBtn.disabled = true;
+      appendBubble('user', message);
+      typingIndicator();
+      const useWebSearch = document.getElementById('webSearch').checked;
+      const useRag = document.getElementById('useRag').checked;
+      const temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
+
+      try {
+        const res = await fetch(API_BASE + '/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message, conversation_id: conversationId, use_web_search: useWebSearch, use_rag: useRag, max_tokens: 512, temperature }),
+        });
+        const data = await res.json();
+        removeTypingIndicator();
+        appendBubble('assistant', data.response || 'Errore', { tools_used: data.tools_used, sources: data.sources });
+        conversationId = data.conversation_id;
+        const history = (conversations[conversationId] || []).concat([{ user: message, assistant: data.response }]);
+        saveConversation(conversationId, history.slice(-20));
+        if (data.tools_used && data.tools_used.length) {
+          toolBadge.textContent = 'Tool: ' + data.tools_used.join(', ');
+          toolBadge.classList.remove('hidden');
+        }
+      } catch (e) {
+        removeTypingIndicator();
+        appendBubble('assistant', 'Errore di connessione: ' + e.message);
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+
+    form.addEventListener('submit', (e) => { e.preventDefault(); sendMessage(); });
+    document.getElementById('newChat').addEventListener('click', () => { conversationId = 'default'; input.focus(); });
+    checkHealth();
+    setInterval(checkHealth, 15000);
+  </script>
+</body>
+</html>

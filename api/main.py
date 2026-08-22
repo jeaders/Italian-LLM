@@ -2,7 +2,6 @@ import os
 import re
 import json
 import math
-import httpx
 import logging
 from datetime import datetime
 from typing import Optional, AsyncGenerator, List, Dict, Any
@@ -31,8 +30,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Models ────────────────────────────────────────────────────────────────────
-
 class ChatRequest(BaseModel):
     message: str
     conversation_id: Optional[str] = None
@@ -51,20 +48,71 @@ class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
     model_name: Optional[str] = None
+    backend: Optional[str] = None
     version: str
 
 class ToolCall(BaseModel):
     name: str
     arguments: Dict[str, Any]
 
-# ── Globals (lazy-loaded) ─────────────────────────────────────────────────────
-
 _model = None
 _tokenizer = None
 _rag_service = None
 _conversations: Dict[str, List[Dict[str, str]]] = {}
+_backend = os.getenv("USE_OLLAMA", "false").lower() == "true" and "ollama" or "transformers"
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+
+def get_ollama_client():
+    import httpx
+    base_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
+    return httpx.Client(base_url=base_url, timeout=120.0)
+
+
+def generate_with_ollama(prompt: str, model: str, max_tokens: int = 512, temperature: float = 0.7) -> str:
+    client = get_ollama_client()
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+        "options": {
+            "num_predict": max_tokens,
+            "temperature": temperature,
+            "repeat_penalty": 1.1,
+        },
+    }
+    resp = client.post("/api/generate", json=payload)
+    resp.raise_for_status()
+    data = resp.json()
+    return (data.get("response") or "").strip()
+
+
+def stream_with_ollama(prompt: str, model: str, max_tokens: int = 512, temperature: float = 0.7):
+    client = get_ollama_client()
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": True,
+        "options": {
+            "num_predict": max_tokens,
+            "temperature": temperature,
+            "repeat_penalty": 1.1,
+        },
+    }
+    with client.stream("POST", "/api/generate", json=payload) as resp:
+        resp.raise_for_status()
+        for line in resp.iter_lines():
+            if not line:
+                continue
+            text = line.decode("utf-8") if isinstance(line, bytes) else line
+            if text.startswith("{"):
+                try:
+                    data = json.loads(text)
+                except Exception:
+                    continue
+                chunk = data.get("response") or ""
+                if chunk:
+                    yield chunk
+
 
 def get_model():
     global _model, _tokenizer
@@ -107,8 +155,6 @@ def get_rag():
     return _rag_service
 
 
-# ── Tool Implementations ─────────────────────────────────────────────────────
-
 TOOLS: Dict[str, Dict[str, Any]] = {
     "web_search": {
         "description": "Cerca informazioni su internet usando DuckDuckGo",
@@ -116,7 +162,7 @@ TOOLS: Dict[str, Dict[str, Any]] = {
         "execute": lambda args: tool_web_search(args["query"]),
     },
     "calculator": {
-        "description": "Esegui calcoli matematici. Supporta +, -, *, /, **, sqrt, log, sin, cos, etc.",
+        "description": "Esegui calcoli matematici",
         "parameters": {"expression": "string"},
         "execute": lambda args: tool_calculator(args["expression"]),
     },
@@ -136,9 +182,14 @@ TOOLS: Dict[str, Dict[str, Any]] = {
         "execute": lambda args: tool_datetime(),
     },
     "unit_converter": {
-        "description": "Converti unità di misura (es: km->miles, celsius->fahrenheit)",
+        "description": "Converti unità di misura",
         "parameters": {"value": "number", "from_unit": "string", "to_unit": "string"},
         "execute": lambda args: tool_unit_converter(args),
+    },
+    "news": {
+        "description": "Cerca notizie recenti",
+        "parameters": {"query": "string"},
+        "execute": lambda args: tool_news(args["query"]),
     },
 }
 
@@ -150,17 +201,14 @@ def tool_web_search(query: str) -> str:
             results = list(ddgs.text(query, max_results=5))
         if not results:
             return "Nessun risultato trovato."
-        formatted = []
-        for r in results:
-            formatted.append(f"- [{r['title']}]({r['href']})\n  {r['body']}")
-        return "\n\n".join(formatted)
+        return "\n\n".join([f"- [{r['title']}]({r['href']})\n  {r['body']}" for r in results])
     except Exception as e:
         logger.error(f"Web search failed: {e}")
         return f"Errore nella ricerca web: {str(e)}"
 
 
 def tool_calculator(expression: str) -> str:
-    allowed = set("0123456789+-*/().%s ")
+    allowed = set("0123456789+-*/().,%s ")
     safe_expr = "".join(c for c in expression if c in allowed)
     try:
         result = eval(safe_expr, {"__builtins__": {}}, {"math": math, "sqrt": math.sqrt, "log": math.log, "sin": math.sin, "cos": math.cos, "pi": math.pi})
@@ -172,13 +220,7 @@ def tool_calculator(expression: str) -> str:
 def tool_wikipedia(query: str) -> str:
     try:
         url = "https://it.wikipedia.org/w/api.php"
-        params = {
-            "action": "query",
-            "list": "search",
-            "srsearch": query,
-            "format": "json",
-            "srlimit": 3,
-        }
+        params = {"action": "query", "list": "search", "srsearch": query, "format": "json", "srlimit": 3}
         with httpx.Client(timeout=10) as client:
             resp = client.get(url, params=params)
             data = resp.json()
@@ -210,16 +252,34 @@ def tool_unit_converter(args: Dict[str, Any]) -> str:
     value = float(args.get("value", 0))
     from_unit = args.get("from_unit", "").lower()
     to_unit = args.get("to_unit", "").lower()
-    if from_unit == "km" and to_unit in ("miglia", "miles"):
-        return f"{value} km = {value * 0.621371:.2f} miglia"
-    if from_unit == "celsius" and to_unit == "fahrenheit":
-        return f"{value}°C = {value * 9/5 + 32:.1f}°F"
-    if from_unit == "euro" and to_unit == "dollaro":
-        return f"€{value} ≈ ${value * 1.08:.2f} (stima)"
+    conversions = {
+        ("km", "miglia"): value * 0.621371,
+        ("km", "miles"): value * 0.621371,
+        ("celsius", "fahrenheit"): value * 9/5 + 32,
+        ("euro", "dollaro"): value * 1.08,
+        ("kg", "lbs"): value * 2.20462,
+        ("litri", "galloni"): value * 0.264172,
+    }
+    key = (from_unit, to_unit)
+    if key in conversions:
+        return f"{value} {from_unit} = {conversions[key]:.2f} {to_unit}"
     return f"Conversione da {from_unit} a {to_unit} non supportata."
 
 
-# ── Inference ────────────────────────────────────────────────────────────────
+def tool_news(query: str) -> str:
+    try:
+        url = f"https://news.google.com/rss/search?q={query}&hl=it"
+        with httpx.Client(timeout=10) as client:
+            resp = client.get(url)
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(resp.content)
+        items = root.findall(".//item")[:5]
+        if not items:
+            return "Nessuna notizia trovata."
+        return "\n\n".join([f"- {item.find('title').text}" for item in items])
+    except Exception as e:
+        return f"Errore nella ricerca notizie: {str(e)}"
+
 
 def build_prompt(message: str, context: str = "", history: List[Dict[str, str]] = None, tools_info: str = "") -> str:
     system = (
@@ -242,6 +302,11 @@ def build_prompt(message: str, context: str = "", history: List[Dict[str, str]] 
 
 
 def generate_response(prompt: str, max_tokens: int = 512, temperature: float = 0.7) -> str:
+    use_ollama = os.getenv("USE_OLLAMA", "false").lower() == "true"
+    if use_ollama:
+        model = os.getenv("OLLAMA_CHAT_MODEL") or os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+        return generate_with_ollama(prompt, model=model, max_tokens=max_tokens, temperature=temperature)
+
     try:
         model, tokenizer = get_model()
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
@@ -267,6 +332,13 @@ def generate_response(prompt: str, max_tokens: int = 512, temperature: float = 0
 
 
 async def stream_response(prompt: str, max_tokens: int = 512, temperature: float = 0.7) -> AsyncGenerator[str, None]:
+    use_ollama = os.getenv("USE_OLLAMA", "false").lower() == "true"
+    if use_ollama:
+        model = os.getenv("OLLAMA_CHAT_MODEL") or os.getenv("OLLAMA_MODEL", "llama3.1:8b")
+        for chunk in stream_with_ollama(prompt, model=model, max_tokens=max_tokens, temperature=temperature):
+            yield chunk
+        return
+
     try:
         model, tokenizer = get_model()
         inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
@@ -291,11 +363,9 @@ async def stream_response(prompt: str, max_tokens: int = 512, temperature: float
             yield char
 
 
-# ── Routes ───────────────────────────────────────────────────────────────────
-
 @app.get("/", response_model=dict)
 async def root():
-    return {"message": "Italian LLM API", "docs": "/docs", "status": "running"}
+    return {"message": "Italian LLM API", "docs": "/docs", "status": "running", "backend": _backend}
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -306,6 +376,7 @@ async def health():
         status="healthy",
         model_loaded=model_loaded,
         model_name=model_name,
+        backend=_backend,
         version="1.0.0",
     )
 
@@ -325,11 +396,9 @@ async def list_tools():
 async def chat(request: ChatRequest):
     logger.info(f"Chat request: {request.message[:100]}...")
 
-    # 1. Retrieve history
     conv_id = request.conversation_id or "default"
     history = _conversations.get(conv_id, [])
 
-    # 2. RAG context
     context = ""
     if request.use_rag:
         try:
@@ -338,7 +407,6 @@ async def chat(request: ChatRequest):
         except Exception as e:
             logger.warning(f"RAG failed: {e}")
 
-    # 3. Tool use (simple rule-based routing)
     tools_used = []
     tool_results = []
 
@@ -352,35 +420,35 @@ async def chat(request: ChatRequest):
             tools_used.append("calculator")
             tool_results.append(f"Calcolo: {tool_calculator(expr)}")
 
-    if "che ore sono" in request.message.lower() or "data" in request.message.lower():
+    if any(word in request.message.lower() for word in ["che ore sono", "data", "ora"]):
         tools_used.append("datetime")
         tool_results.append(tool_datetime())
 
-    if not request.use_web_search and any(word in request.message.lower() for word in ["meteo", "tempo", "weather"]):
+    if any(word in request.message.lower() for word in ["meteo", "tempo", "weather"]):
         city_match = re.search(r"a\s+([A-Za-zÀ-ÿ\s]+)", request.message)
         city = city_match.group(1) if city_match else "Roma"
         tools_used.append("weather")
         tool_results.append(tool_weather(city))
 
+    if any(word in request.message.lower() for word in ["notizie", "news"]):
+        tools_used.append("news")
+        tool_results.append(tool_news(request.message))
+
     tools_info = "\n".join([f"- {name}: {TOOLS[name]['description']}" for name in tools_used])
     tool_context = "\n\n".join(tool_results) if tool_results else ""
 
-    # 4. Build prompt
     full_context = "\n\n".join(filter(None, [context, tool_context]))
     prompt = build_prompt(request.message, context=full_context, history=history, tools_info=tools_info)
 
-    # 5. Generate
     response = generate_response(
         prompt,
         max_tokens=request.max_tokens,
         temperature=request.temperature,
     )
 
-    # 6. Update history
     history.append({"user": request.message, "assistant": response})
     _conversations[conv_id] = history[-20:]
 
-    # 7. Sources
     sources = []
     if context:
         sources = [s[:200] for s in context.split("\n\n")[:3]]
@@ -420,9 +488,6 @@ async def chat_stream(request: ChatRequest):
     async def generate():
         async for chunk in stream_response(prompt, request.max_tokens, request.temperature):
             yield chunk
-        # Update history after stream
-        # Note: we'd need to accumulate the full response to store it
-        # For simplicity, skip history update in streaming mode
 
     return StreamingResponse(generate(), media_type="text/plain")
 

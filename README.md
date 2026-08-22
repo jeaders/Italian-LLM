@@ -40,34 +40,48 @@ Creare un LLM italiano di alta qualità, completamente open source e gratuito, c
 ### Prerequisiti
 - Python 3.10+
 - 16GB RAM (minimo), 32GB+ consigliato
-- GPU NVIDIA con 12GB+ VRAM (opzionale ma consigliato)
+- macOS / Linux / Windows
 
-### Installazione Locale
+### Opzione 1: Prova locale veloce con Ollama (consigliata)
 
 ```bash
-# Clone il repo
-git clone https://github.com/tuousername/italian-llm.git
-cd italian-llm
+# 1. Installa Ollama
+brew install --cask ollama
 
-# Crea virtual environment
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+# 2. Scarica un modello italiano
+ollama pull llama3.1:8b
 
-# Installa dipendenze
-pip install -r requirements.txt
-
-# Configura .env
+# 3. Clona il repo e configura
+git clone https://github.com/jeaders/Italian-LLM.git
+cd Italian-LLM
 cp .env.example .env
-# Modifica .env con le tue configurazioni
 
-# Avvia API
+# 4. In .env imposta
+USE_OLLAMA=true
+OLLAMA_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.1:8b
+
+# 5. Avvia API
+make inference
+# oppure
 uvicorn api.main:app --reload --port 8000
 
-# Avvia UI (in un altro terminale)
-chainlit run frontend/chainlit_app.py --port 8501
+# 6. Apri la UI
+open frontend/index.html
 ```
 
-Apri http://localhost:8501 nel browser.
+### Opzione 2: Installazione completa
+
+```bash
+git clone https://github.com/jeaders/Italian-LLM.git
+cd Italian-LLM
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env
+uvicorn api.main:app --reload --port 8000
+open frontend/index.html
+```
 
 ## 📊 Dataset
 
