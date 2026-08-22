@@ -143,12 +143,15 @@ curl -X POST "http://localhost:8000/chat" \
 
 ## 📦 Deploy
 
-### HuggingFace Spaces (Consigliato)
+### HuggingFace Spaces
 
 1. Crea uno Space su [huggingface.co/spaces](https://huggingface.co/spaces)
-2. Carica il modello su [huggingface.co/models](https://huggingface.co/models)
-3. Configura lo Space con Gradio o Streamlit
-4. Deploy automatico!
+2. Seleziona **Gradio** come SDK
+3. Carica `frontend/gradio_app.py` come `app.py` nello Space
+4. Carica `frontend/requirements.txt`
+5. Nelle impostazioni dello Space aggiungi:
+   - `API_URL` come variabile d'ambiente, oppure usa il backend pubblico se disponibile
+6. Push su HuggingFace per attivare il deploy automatico
 
 ### Docker
 
@@ -202,4 +205,3 @@ MIT License - vedi [LICENSE](LICENSE)
 ⭐ Se ti piace il progetto, lascia una stella su GitHub!
 
 Made with ❤️ in Italy 🇮🇹 Alex Mirici Web Developer
-# Italian-LLM
