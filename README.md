@@ -1,5 +1,7 @@
 # Italian LLM 🇮🇹
 
+[![HuggingFace Space](https://huggingface.co/api/spaces/jeaders/Italian-LLM-Space/badge)](https://huggingface.co/spaces/jeaders/Italian-LLM-Space)
+
 Un Large Language Model open source in italiano, addestrato per competere con i migliori modelli internazionali come Claude, GPT-4, Gemini e Perplexity.
 
 ## 🎯 Obiettivo
@@ -155,17 +157,34 @@ curl -X POST "http://localhost:8000/chat" \
   }'
 ```
 
-## 📦 Deploy
+## 📦 Deploy pubblico
 
-### HuggingFace Spaces
+### HuggingFace Space (consigliato)
 
-1. Crea uno Space su [huggingface.co/spaces](https://huggingface.co/spaces)
-2. Seleziona **Gradio** come SDK
-3. Carica `frontend/gradio_app.py` come `app.py` nello Space
-4. Carica `frontend/requirements.txt`
-5. Nelle impostazioni dello Space aggiungi:
-   - `API_URL` come variabile d'ambiente, oppure usa il backend pubblico se disponibile
-6. Push su HuggingFace per attivare il deploy automatico
+Questo repo è già predisposto per uno Space pubblico.
+
+1. Vai su [huggingface.co/spaces](https://huggingface.co/spaces)
+2. Crea un nuovo Space come **Gradio**
+3. Collega il repo GitHub `jeaders/Italian-LLM`
+4. Nelle impostazioni dello Space imposta:
+   - **App file**: `space/app.py`
+   - **Requirements file**: `space/requirements.txt`
+5. Aggiungi le variabili d'ambiente:
+   - `HF_TOKEN`: token HuggingFace con permessi di inference
+   - `MODEL_ID`: modello da usare, es `google/gemma-2-2b-it`
+6. Salva: parte il deploy automatico
+
+La demo sarà raggiungibile all'indirizzo dello Space.
+
+### Locale con Ollama
+
+```bash
+brew install --cask ollama
+ollama pull llama3.1:8b
+cp .env.example .env
+uvicorn api.main:app --reload --port 8000
+open frontend/index.html
+```
 
 ### Docker
 
