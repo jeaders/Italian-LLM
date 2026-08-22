@@ -26,8 +26,8 @@ async def on_message(message: cl.Message):
                 f"{API_URL}/chat",
                 json={
                     "message": message.content,
-                    "use_web_search": True,
-                    "use_rag": True,
+                    "use_web_search": False,
+                    "use_rag": False,
                 }
             )
             response.raise_for_status()

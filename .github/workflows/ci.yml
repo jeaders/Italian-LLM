@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install ruff
+      - run: ruff check api training data frontend
+
+  test-api:
+    runs-on: ubuntu-latest
+    services:
+      chromadb:
+        image: chromadb/chroma:latest
+        ports:
+          - 8001:8000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install fastapi uvicorn httpx pydantic python-dotenv duckduckgo-search
+      - run: python -m pytest tests/ -v
+
+  build-docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/build-push-action@v5
+        with:
+          tags: italian-llm:latest
+          load: true
