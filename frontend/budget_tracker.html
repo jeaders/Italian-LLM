@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget Tracker - 100€ al mese</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            neon: { 50: '#e6fff5', 100: '#b3ffe0', 200: '#80ffcc', 300: '#4dffb8', 400: '#1affa3', 500: '#00e68a', 600: '#00b36b', 700: '#00804d', 800: '#004d2e', 900: '#001a0f' },
+            alert: { 500: '#ff4d4d', 600: '#cc0000' }
+          },
+          boxShadow: {
+            glow: '0 0 35px rgba(0, 230, 138, 0.25)',
+            card: '0 10px 30px rgba(0, 0, 0, 0.35)'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(0, 230, 138, 0.08), transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.08), transparent 40%),
+        #07090f;
+    }
+
+    .glass {
+      background: rgba(20, 24, 36, 0.65);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .glass-strong {
+      background: rgba(10, 13, 22, 0.8);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .brand-gradient {
+      background: linear-gradient(135deg, #00e68a, #6366f1);
+    }
+
+    .text-gradient {
+      background: linear-gradient(135deg, #00e68a, #6366f1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .expense-card {
+      background: linear-gradient(135deg, rgba(20, 24, 36, 0.9), rgba(30, 34, 48, 0.9));
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .expense-card:hover {
+      transform: translateY(-1px) scale(1.005);
+      border-color: rgba(0, 230, 138, 0.25);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    }
+
+    .stat-ring {
+      transition: stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #00e68a, #00b36b);
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 25px rgba(0, 230, 138, 0.25);
+    }
+
+    .input-field {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: rgba(0, 230, 138, 0.45);
+      box-shadow: 0 0 0 3px rgba(0, 230, 138, 0.08);
+    }
+
+    .category-pill {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .category-pill:hover {
+      background: rgba(0, 230, 138, 0.1);
+      border-color: rgba(0, 230, 138, 0.35);
+      transform: translateY(-1px);
+    }
+
+    .scrollbar-thin::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+    }
+
+    .float-emoji {
+      animation: floatUp 6s ease-in-out infinite;
+      opacity: 0.35;
+    }
+
+    @keyframes floatUp {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-18px) rotate(8deg); }
+    }
+
+    .pulse-ring {
+      animation: pulse 2.8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.06); opacity: 1; }
+    }
+
+    .tip-glow {
+      animation: glowTip 2.2s ease-in-out infinite;
+    }
+
+    @keyframes glowTip {
+      0%, 100% { box-shadow: 0 0 25px rgba(0, 230, 138, 0.08); }
+      50% { box-shadow: 0 0 45px rgba(0, 230, 138, 0.2); }
+    }
+
+    .chart-segment {
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+      transform-origin: center;
+    }
+
+    .chart-segment:hover {
+      transform: scale(1.03);
+      opacity: 0.95;
+    }
+
+    .reveal {
+      animation: reveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      opacity: 0;
+      transform: translateY(12px);
+    }
+
+    @keyframes reveal {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .loader-dot {
+      animation: loader 1.2s ease-in-out infinite;
+    }
+
+    .loader-dot:nth-child(2) { animation-delay: 0.15s; }
+    .loader-dot:nth-child(3) { animation-delay: 0.3s; }
+
+    @keyframes loader {
+      0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen antialiased">
+  <div class="relative overflow-hidden">
+    <div class="pointer-events-none absolute inset-0">
+      <div class="float-emoji absolute top-24 left-10 text-3xl">🥦</div>
+      <div class="float-emoji absolute top-36 right-16 text-2xl" style="animation-delay: 1.4s">🌱</div>
+      <div class="float-emoji absolute bottom-24 left-20 text-2xl" style="animation-delay: 2.1s">⚡</div>
+      <div class="float-emoji absolute bottom-32 right-24 text-3xl" style="animation-delay: 0.7s">🛒</div>
+      <div class="float-emoji absolute top-1/2 left-1/3 text-xl" style="animation-delay: 1.9s">📊</div>
+    </div>
+
+    <div class="relative max-w-6xl mx-auto px-4 py-8">
+      <header class="mb-10 reveal">
+        <div class="flex items-start justify-between flex-wrap gap-4">
+          <div>
+            <p class="text-xs font-medium tracking-widest uppercase text-neon-400 mb-2">Survival Mode</p>
+            <h1 class="text-4xl md:text-5xl font-bold tracking-tight">
+              <span class="text-gradient">Budget</span>
+              <span class="text-white">Tracker</span>
+            </h1>
+            <p class="text-slate-400 mt-2 text-sm md:text-base">Obiettivo: sopravvivere con <span class="text-neon-400 font-semibold">100 €</span> al mese</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="glass rounded-2xl px-4 py-2 flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full bg-neon-500 pulse-ring"></div>
+              <span id="monthLabel" class="text-xs text-slate-300 font-medium">-</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-5 space-y-6">
+          <div class="glass rounded-3xl p-6 reveal" style="animation-delay: 0.05s">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <p class="text-xs font-medium tracking-widest uppercase text-slate-400">Saldo</p>
+                <p id="remaining" class="text-4xl font-bold mt-1">-</p>
+              </div>
+              <div class="relative w-20 h-20">
+                <svg class="w-20 h-20 -rotate-90" viewBox="0 0 120 120">
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="12" />
+                  <circle id="progressRing" cx="60" cy="60" r="48" fill="none" stroke="#00e68a" stroke-width="12" stroke-linecap="round" stroke-dasharray="301.59" stroke-dashoffset="301.59" class="stat-ring" />
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <span id="percentLabel" class="text-xs font-semibold text-slate-300">-</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-3">
+              <div class="flex-1 rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
+                <p class="text-xs text-slate-400 mb-1">Budget</p>
+                <p class="text-lg font-semibold">100,00 €</p>
+              </div>
+              <div class="flex-1 rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
+                <p class="text-xs text-slate-400 mb-1">Spesi</p>
+                <p id="spent" class="text-lg font-semibold text-alert-500">-</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass rounded-3xl p-6 reveal" style="animation-delay: 0.1s">
+            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Consiglio del momento</p>
+            <div id="adviceBox" class="tip-glow rounded-2xl bg-neon-500/[0.07] border border-neon-500/20 p-4">
+              <p id="advice" class="text-sm text-slate-200 leading-relaxed">Caricamento...</p>
+            </div>
+            <div id="alertBox" class="hidden mt-3 rounded-2xl bg-alert-500/10 border border-alert-500/25 p-3">
+              <p id="alert" class="text-xs text-alert-500 font-medium"></p>
+            </div>
+          </div>
+
+          <div class="glass-strong rounded-3xl p-6 reveal" style="animation-delay: 0.15s">
+            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Aggiungi spesa</p>
+            <form id="expenseForm" class="space-y-3">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Importo</label>
+                  <input id="amount" type="number" step="0.01" placeholder="0,00" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100" required />
+                </div>
+                <div>
+                  <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Categoria</label>
+                  <input id="category" type="text" list="categoryList" placeholder="Es: cibo" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100" required />
+                  <datalist id="categoryList">
+                    <option value="cibo"></option>
+                    <option value="affitto"></option>
+                    <option value="bollette"></option>
+                    <option value="trasporti"></option>
+                    <option value="salute"></option>
+                    <option value="igiene"></option>
+                    <option value="svago"></option>
+                    <option value="vestiti"></option>
+                    <option value="animali"></option>
+                    <option value="altro"></option>
+                  </datalist>
+                </div>
+                <div>
+                  <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Descrizione</label>
+                  <input id="description" type="text" placeholder="Opzionale" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100" />
+                </div>
+              </div>
+              <div class="flex items-center justify-between pt-1">
+                <div id="quickCategories" class="flex flex-wrap gap-2">
+                  <button type="button" data-category="cibo" class="category-pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">🥦 Cibo</button>
+                  <button type="button" data-category="bollette" class="category-pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">💡 Bollette</button>
+                  <button type="button" data-category="trasporti" class="category-pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">🚌 Trasporti</button>
+                  <button type="button" data-category="salute" class="category-pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">💊 Salute</button>
+                </div>
+                <button type="submit" class="btn-primary text-sm font-semibold text-white px-5 py-2.5 rounded-xl">Aggiungi</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="lg:col-span-7 space-y-6">
+          <div class="glass rounded-3xl p-6 reveal" style="animation-delay: 0.08s">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <p class="text-xs font-medium tracking-widest uppercase text-slate-400">Distribuzione spese</p>
+                <p class="text-[10px] text-slate-500 mt-1">Per categoria del mese corrente</p>
+              </div>
+            </div>
+            <div class="flex flex-col md:flex-row items-center gap-6">
+              <div class="relative w-48 h-48 shrink-0">
+                <svg id="donutChart" viewBox="0 0 120 120" class="w-48 h-48 -rotate-90">
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="18" />
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <span id="chartTotal" class="text-2xl font-bold text-white">0 €</span>
+                  <span class="text-[10px] text-slate-500 uppercase tracking-wider">Totale</span>
+                </div>
+              </div>
+              <div id="categoryLegend" class="flex-1 w-full space-y-2">
+                <div class="text-xs text-slate-500">Aggiungi spese per vedere il grafico</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass rounded-3xl p-6 reveal" style="animation-delay: 0.12s">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <p class="text-xs font-medium tracking-widest uppercase text-slate-400">Transazioni</p>
+                <p class="text-[10px] text-slate-500 mt-1">Ultime voci registrate</p>
+              </div>
+              <button id="resetBtn" class="category-pill text-[11px] px-3 py-1.5 rounded-full text-slate-300">Reset mese</button>
+            </div>
+            <div id="expenses" class="space-y-2 max-h-96 overflow-y-auto scrollbar-thin pr-1">
+              <div id="emptyState" class="flex flex-col items-center justify-center py-10 text-slate-500 gap-2">
+                <div class="text-2xl">📭</div>
+                <div class="text-xs">Nessuna spesa registrata</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="mt-10 text-center">
+        <p class="text-[10px] text-slate-600 tracking-wide">Budget Tracker — Sopravvivere con 100€ al mese</p>
+      </footer>
+    </div>
+  </div>
+
+  <div id="toast" class="fixed bottom-6 right-6 hidden glass-strong rounded-2xl px-4 py-3 border border-neon-500/30 shadow-glow">
+    <p id="toastText" class="text-xs text-neon-300 font-medium"></p>
+  </div>
+
+  <script>
+    const API_BASE = (location.protocol === 'https:' ? 'https://' : 'http://') + location.hostname + ':8000';
+    const COLORS = ['#00e68a', '#6366f1', '#f43f5e', '#f59e0b', '#06b6d4', '#8b5cf6', '#ec4899', '#10b981'];
+    const CATEGORY_EMOJI = {
+      cibo: '🥦', affitto: '🏠', bollette: '💡', trasporti: '🚌', salute: '💊',
+      igiene: '🧼', svago: '🎮', vestiti: '👕', animali: '🐾', altro: '📦'
+    };
+
+    function fmt(n) {
+      return Number(n).toFixed(2) + ' €';
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showToast(message, duration = 2200) {
+      const toast = document.getElementById('toast');
+      const toastText = document.getElementById('toastText');
+      toastText.textContent = message;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), duration);
+    }
+
+    async function loadStatus() {
+      try {
+        const res = await fetch(API_BASE + '/budget/status');
+        const data = await res.json();
+        const spent = Number(data.spent || 0);
+        const remaining = Number(data.remaining || 100);
+        const percent = data.percentage_used || 0;
+        const cappedPercent = Math.min(percent, 100);
+        const circumference = 2 * Math.PI * 48;
+        const offset = circumference - (cappedPercent / 100) * circumference;
+
+        document.getElementById('spent').textContent = fmt(spent);
+        const remainingEl = document.getElementById('remaining');
+        remainingEl.textContent = fmt(remaining);
+        remainingEl.className = 'text-4xl font-bold ' + (remaining < 0 ? 'text-alert-500' : 'text-neon-400');
+
+        document.getElementById('progressRing').style.strokeDashoffset = offset;
+        document.getElementById('progressRing').setAttribute('stroke', remaining < 0 ? '#ff4d4d' : '#00e68a');
+        document.getElementById('percentLabel').textContent = Math.round(cappedPercent) + '%';
+        document.getElementById('monthLabel').textContent = data.current_month || '-';
+
+        const alertBox = document.getElementById('alertBox');
+        if (data.alert) {
+          document.getElementById('alert').textContent = data.alert;
+          alertBox.classList.remove('hidden');
+        } else {
+          alertBox.classList.add('hidden');
+        }
+
+        return data;
+      } catch (e) {
+        document.getElementById('spent').textContent = 'Errore';
+        document.getElementById('remaining').textContent = 'Errore';
+        return null;
+      }
+    }
+
+    async function loadAdvice() {
+      try {
+        const res = await fetch(API_BASE + '/budget/advice');
+        const data = await res.json();
+        document.getElementById('advice').textContent = data.tip || 'Nessun consiglio disponibile.';
+      } catch (e) {
+        document.getElementById('advice').textContent = 'Consiglio non disponibile.';
+      }
+    }
+
+    function buildDonut(byCategory) {
+      const svg = document.getElementById('donutChart');
+      const totalEl = document.getElementById('chartTotal');
+      const legendEl = document.getElementById('categoryLegend');
+      const entries = Object.entries(byCategory || {});
+      const total = entries.reduce((sum, [, v]) => sum + Number(v), 0);
+      totalEl.textContent = fmt(total);
+
+      if (!entries.length) {
+        legendEl.innerHTML = '<div class="text-xs text-slate-500">Aggiungi spese per vedere il grafico</div>';
+        return;
+      }
+
+      const radius = 48;
+      const circumference = 2 * Math.PI * radius;
+      let accumulated = 0;
+      let segments = '';
+
+      entries.forEach(([category, value], index) => {
+        const fraction = Number(value) / total;
+        const dash = fraction * circumference;
+        const gap = circumference - dash;
+        const color = COLORS[index % COLORS.length];
+        const offset = circumference - accumulated;
+        accumulated += dash;
+
+        segments += `<circle cx="60" cy="60" r="${radius}" fill="none" stroke="${color}" stroke-width="18" stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}" class="chart-segment" />`;
+      });
+
+      svg.innerHTML = `<circle cx="60" cy="60" r="${radius}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="18" />` + segments;
+
+      legendEl.innerHTML = entries.map(([category, value], index) => {
+        const color = COLORS[index % COLORS.length];
+        const pct = total > 0 ? ((Number(value) / total) * 100).toFixed(1) : 0;
+        const emoji = CATEGORY_EMOJI[category.toLowerCase()] || '📦';
+        return `<div class="flex items-center justify-between rounded-xl bg-white/[0.02] border border-white/[0.06] px-3 py-2">
+          <div class="flex items-center gap-2">
+            <span class="text-sm">${emoji}</span>
+            <span class="text-xs text-slate-300 capitalize">${escapeHtml(category)}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] text-slate-500">${pct}%</span>
+            <span class="text-xs font-medium text-slate-200 w-16 text-right">${fmt(value)}</span>
+            <span class="w-2.5 h-2.5 rounded-full" style="background:${color}"></span>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    async function loadExpenses() {
+      try {
+        const res = await fetch(API_BASE + '/budget/status');
+        const data = await res.json();
+        const container = document.getElementById('expenses');
+        const expenses = (data.expenses || []).slice().reverse();
+        if (!expenses.length) {
+          container.innerHTML = `<div id="emptyState" class="flex flex-col items-center justify-center py-10 text-slate-500 gap-2">
+            <div class="text-2xl">📭</div>
+            <div class="text-xs">Nessuna spesa registrata</div>
+          </div>`;
+          return;
+        }
+
+        container.innerHTML = expenses.map((ex, idx) => {
+          const emoji = CATEGORY_EMOJI[String(ex.category || 'altro').toLowerCase()] || '📦';
+          const colorIdx = Math.abs(hashCode(ex.category || 'altro')) % COLORS.length;
+          const color = COLORS[colorIdx];
+          return `<div class="expense-card rounded-2xl px-4 py-3 flex items-center justify-between gap-3" style="animation: reveal 0.45s cubic-bezier(0.22,1,0.36,1) ${Math.min(idx * 0.03, 0.25)}s forwards; opacity:0;">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm shrink-0" style="background:${color}20; color:${color}">
+                ${emoji}
+              </div>
+              <div class="min-w-0">
+                <div class="text-sm text-slate-200 truncate">${escapeHtml(ex.description || ex.category || 'Spesa')}</div>
+                <div class="text-[10px] text-slate-500">${new Date(ex.date).toLocaleString('it-IT')} · <span class="capitalize">${escapeHtml(ex.category || 'altro')}</span></div>
+              </div>
+            </div>
+            <div class="text-sm font-semibold text-alert-500 shrink-0">-${fmt(ex.amount).replace(' €','')} €</div>
+          </div>`;
+        }).join('');
+      } catch (e) {
+        document.getElementById('expenses').innerHTML = '<div class="text-xs text-alert-500">Errore nel caricamento.</div>';
+      }
+    }
+
+    function hashCode(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return hash;
+    }
+
+    document.getElementById('expenseForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById('amount').value);
+      const category = document.getElementById('category').value.trim();
+      const description = document.getElementById('description').value.trim();
+      if (!amount || !category) return;
+
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Salvataggio...';
+
+      try {
+        const res = await fetch(API_BASE + '/budget/expenses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, category, description }),
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        document.getElementById('expenseForm').reset();
+        showToast('Spesa aggiunta');
+        await refreshAll();
+      } catch (err) {
+        showToast('Errore: ' + err.message, 3000);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    });
+
+    document.querySelectorAll('#quickCategories button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById('category').value = btn.dataset.category;
+        document.getElementById('amount').focus();
+      });
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', async () => {
+      if (!confirm('Resettare il budget per il nuovo mese?')) return;
+      try {
+        const res = await fetch(API_BASE + '/budget/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirm: true }),
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        showToast('Budget resettato');
+        await refreshAll();
+      } catch (err) {
+        showToast('Errore reset: ' + err.message, 3000);
+      }
+    });
+
+    async function refreshAll() {
+      const status = await loadStatus();
+      await loadAdvice();
+      await loadExpenses();
+      if (status && status.by_category) {
+        buildDonut(status.by_category);
+      }
+    }
+
+    refreshAll();
+    setInterval(refreshAll, 20000);
+  </script>
+</body>
+</html>

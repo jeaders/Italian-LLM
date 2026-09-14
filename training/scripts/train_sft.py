@@ -71,6 +71,18 @@ def format_instruction(example):
         "text": f"### Istruzione:\n{example['instruction']}\n\n### Input:\n{example.get('input', '')}\n\n### Risposta:\n{example['output']}"
     }
 
+def load_dataset_local(path: str):
+    import json
+    from datasets import Dataset
+    with open(path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    return Dataset.from_list(data)
+
+def load_dataset_from_config(config: dict):
+    if config.get("dataset_path"):
+        return load_dataset_local(config["dataset_path"])
+    return load_dataset(config["dataset_name"], split="train")
+
 def main():
     config = load_config("training/configs/sft_config.yaml")
     
@@ -79,7 +91,7 @@ def main():
     model = setup_lora(model, config)
     
     # Load and format dataset
-    dataset = load_dataset(config["dataset_name"], split="train")
+    dataset = load_dataset_from_config(config)
     dataset = dataset.map(format_instruction, remove_columns=dataset.column_names)
     
     # Training arguments

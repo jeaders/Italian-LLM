@@ -7,6 +7,8 @@ __pycache__/
 env/
 venv/
 .venv/
+.venv312/
+.venv*/
 *.egg-info/
 dist/
 build/
@@ -16,6 +18,8 @@ data/raw/*
 data/processed/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
+!data/processed/italian_instructions.json
+!data/processed/survival_instructions.json
 
 # Models
 models/base/*
@@ -26,6 +30,21 @@ models/merged/*
 # Logs
 logs/
 *.log
+
+# Training artifacts
+models/adapter/*
+models/merged/*
+models/base/*
+!models/base/.gitkeep
+!models/merged/.gitkeep
+wandb/
+mlruns/
+runs/
+*.bin
+*.safetensors
+*.onnx
+*.pt
+*.pth
 
 # IDE
 .vscode/
@@ -40,6 +59,8 @@ Thumbs.db
 
 # Secrets
 .env
+.env.*
+!.env.example
 *.pem
 *.key
 
@@ -52,3 +73,6 @@ wandb/
 
 # Docker
 docker-compose.override.yml
+
+# Kilo local state
+.kilo/

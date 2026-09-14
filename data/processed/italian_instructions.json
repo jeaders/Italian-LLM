@@ -1,0 +1,52 @@
+[
+  {
+    "instruction": "Spiega la differenza tra una repubblica e una monarchia",
+    "input": "",
+    "output": "Una repubblica è una forma di governo in cui il capo dello Stato è eletto o nominato dal popolo, non per diritto dinastico. Una monarchia, invece, concentra la carica suprema in un re o una regina, spesso per successione ereditaria. Nelle repubbliche moderne il potere è solitamente regolato da una Costituzione, mentre nelle monarchie può essere assoluto o costituzionale."
+  },
+  {
+    "instruction": "Traduci in inglese: Il cielo è coperto e domani pioverà.",
+    "input": "",
+    "output": "The sky is overcast and it will rain tomorrow."
+  },
+  {
+    "instruction": "Quali sono le regioni d'Italia?",
+    "input": "",
+    "output": "L'Italia è divisa in 20 regioni: Abruzzo, Basilicata, Calabria, Campania, Emilia-Romagna, Friuli-Venezia Giulia, Lazio, Liguria, Lombardia, Marche, Molise, Piemonte, Puglia, Sardegna, Sicilia, Toscana, Trentino-Alto Adige, Umbria, Valle d'Aosta e Veneto."
+  },
+  {
+    "instruction": "Scrivi una poesia di 4 versi sul mare italiano",
+    "input": "",
+    "output": "Sotto il sole del Sud si distende il mare,\nblu profondo che culla i ricordi del porto,\nle onde raccontano storie di viaggio,\nmentre il vento disegna nuovi destini."
+  },
+  {
+    "instruction": "Cos'è il PIL e come si calcola?",
+    "input": "",
+    "output": "Il PIL, o Prodotto Interno Lordo, misura il valore totale di tutti i beni e servizi prodotti in un paese in un anno. Si calcola con tre approcci: produzione, reddito e spesa. L'approcio della spesa somma consumi, investimenti, spesa pubblica e esportazioni nette."
+  },
+  {
+    "instruction": "Riassumi il concetto di intelligenza artificiale in italiano",
+    "input": "",
+    "output": "L'intelligenza artificiale è la branca dell'informatica che studia come creare sistemi capaci di svolgere compiti che normalmente richiedono intelligenza umana: comprensione del linguaggio, riconoscimento visivo, ragionamento e apprendimento dall'esperienza."
+  },
+  {
+    "instruction": "Dammi 3 idee per un viaggio in Sicilia di 5 giorni",
+    "input": "",
+    "output": "1. Giorno 1-2: Palermo, con mercati storici e street food. 2. Giorno 3-4: Valle dei Templi ad Agrigento e Scala dei Turchi. 3. Giorno 5: Etna e Taormina, tra natura e vista sul mare."
+  },
+  {
+    "instruction": "Come si scrive una mail formale in italiano?",
+    "input": "",
+    "output": "Una mail formale inizia con il saluto 'Egregio/Egregia' o 'Gentile', segue un tono rispettoso e chiuso con 'Cordiali saluti' o 'Distinti saluti'. Evita abbreviazioni e linguaggio colloquiale, struttura il messaggio in paragrafi chiari e verifica ortografia e punteggiatura."
+  },
+  {
+    "instruction": "Chi ha dipinto la Gioconda?",
+    "input": "",
+    "output": "La Gioconda è stata dipinta da Leonardo da Vinci tra il 1503 e il 1519 circa. Si trova oggi al Museo del Louvre di Parigi."
+  },
+  {
+    "instruction": "Quali sono i vantaggi del lavoro da remoto?",
+    "input": "",
+    "output": "I vantaggi includono maggiore flessibilità oraria, risparmio di tempo e denaro sui tragitti, migliore conciliazione vita-lavoro, possibilità di lavorare da luoghi diversi e spesso una maggiore autonomia nella gestione dei compiti."
+  }
+]

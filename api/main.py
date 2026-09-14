@@ -514,3 +514,59 @@ async def get_conversation(conversation_id: str):
 async def delete_conversation(conversation_id: str):
     _conversations.pop(conversation_id, None)
     return {"status": "deleted"}
+
+
+# Budget Tracker endpoints
+class ExpenseRequest(BaseModel):
+    amount: float
+    category: str
+    description: str = ""
+
+
+class BudgetResetRequest(BaseModel):
+    confirm: bool = False
+
+
+@app.post("/budget/expenses")
+async def add_budget_expense(request: ExpenseRequest):
+    from api.services.budget_tracker import add_expense, get_status
+    try:
+        add_expense(request.amount, request.category, request.description)
+        return {"status": "ok", "expense": {"amount": request.amount, "category": request.category, "description": request.description}}
+    except Exception as e:
+        logger.error(f"Budget expense failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/budget/status")
+async def get_budget_status():
+    from api.services.budget_tracker import get_status
+    try:
+        return get_status()
+    except Exception as e:
+        logger.error(f"Budget status failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/budget/advice")
+async def get_budget_advice():
+    from api.services.budget_tracker import get_survival_advice
+    try:
+        advice = get_survival_advice()
+        return advice
+    except Exception as e:
+        logger.error(f"Budget advice failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/budget/reset")
+async def reset_budget(request: BudgetResetRequest):
+    if not request.confirm:
+        raise HTTPException(status_code=400, detail="Devi confermare il reset con confirm=true")
+    from api.services.budget_tracker import reset_month
+    try:
+        reset_month()
+        return {"status": "reset", "message": "Budget resettato per il nuovo mese"}
+    except Exception as e:
+        logger.error(f"Budget reset failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

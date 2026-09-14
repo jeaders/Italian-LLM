@@ -1,0 +1,227 @@
+[
+  {
+    "instruction": "Come posso sopravvivere con 100 euro al mese?",
+    "input": "",
+    "output": "Sopravvivere con 100 euro al mese è possibile solo con scelte estreme: evita affitti pagando un contributo a familiari o cercando alloggi popolari, cucina esclusivamente in casa con ingredienti base (riso, pasta, legumi, uova), non comprare niente di superfluo, usa solo servizi pubblici, cerca cibo nei banchi alimentari, e sfrutta risorse gratuite come biblioteche e parchi."
+  },
+  {
+    "instruction": "Quali sono le spese prioritarie con 100 euro al mese?",
+    "input": "",
+    "output": "Con 100 euro al mese le spese prioritarie sono: utenze minime (luce, gas, acqua con tariffe sociali), spesa alimentare essenziale (circa 50-60 euro), igiene personale (sapone, dentifricio), e una piccola riserva per emergenze. Tutto il resto deve essere eliminato: abbonamenti, svago, vestiario nuovo, ristoranti."
+  },
+  {
+    "instruction": "Dove trovare cibo economico o gratuito?",
+    "input": "",
+    "output": "Puoi rivolgerti a: banchi alimentari della Caritas o della Croce Rossa, mense dei poveri parrocchiali, progetti di recupero alimentare come Last Minute Sotto Casa o Too Good To Go, orti urbani condivisi dove coltivare verdure, e negozi che regalano prodotti prossimi alla scadenza."
+  },
+  {
+    "instruction": "Come risparmiare sulle bollette con 100 euro al mese?",
+    "input": "",
+    "output": "Usa lampadine a LED, spegni sempre gli elettrodomestici in standby, lavati con acqua fredda, utilizza solo una stanza riscaldata e tienila a 19 gradi, cucina con il coperchio, richiedi le tariffe sociali per luce e gas se hai diritto, e se possibile installa pannelli solari fai-da-te o usa energia condivisa."
+  },
+  {
+    "instruction": "Esistono aiuti economici per chi ha solo 100 euro al mese?",
+    "input": "",
+    "output": "Sì, in Italia puoi chiedere: il Reddito di Cittadinanza (se ancora disponibile nella tua regione), il Bonus Sociale per le utenze, buoni pasto o voucher spesa dal comune, sussidi per l'affitto, gratuità dei farmaci essenziali (ticket sanitari esenti), mense scolastiche gratuite per i figli, e contributi per l'acquisto di generi alimentari."
+  },
+  {
+    "instruction": "Come vestirsi spendendo poco con 100 euro al mese?",
+    "input": "",
+    "output": "Non comprare vestiti nuovi: usa mercatini dell'usato, gruppi Facebook di regalo, scambia abiti con amici, ripara ciò che si rompe invece di sostituirlo, lava i vestiti meno spesso per consumarli di meno, e impara a cucire bottoni e rammendi base per allungare la vita dei capi."
+  },
+  {
+    "instruction": "Come risparmiare sui trasporti con 100 euro al mese?",
+    "input": "",
+    "output": "Cammina o usa la bicicletta per gli spostamenti brevi, acquista abbonamenti annuali se possibile (più convenienti dei mensili), car sharing quando strettamente necessario, eviva i taxi a tutti i costi, e se vivi in campagna organizza passaggi con colleghi o vicini per dividere le spese di carburante."
+  },
+  {
+    "instruction": "Come gestire una casa con 100 euro al mese?",
+    "input": "",
+    "output": "Se hai una casa, riduci i consumi al minimo: stacca boiler quando non serve, usa stufe a pellet o legna se disponibile, approfitta di orti condominiali per coltivare cibo, raccogli acqua piovana per annaffiare, fai il compostaggio per ridurre i rifiuti, e baratta servizi con i vicini (es. riparazioni in cambio di cibo o altro)."
+  },
+  {
+    "instruction": "Come risparmiare su salute e medicine con 100 euro al mese?",
+    "input": "",
+    "output": "Richiedi l'esenzione ticket se hai diritto per reddito o patologia, usa i farmaci generici invece dei brand, approfitta delle giornate di prevenzione gratuita (screening, vaccinazioni), visita i consultori per controlli gratuiti, evita medicine non essenziali, e per piccoli malesseri usa rimedi naturali (tè, miele, riposo)."
+  },
+  {
+    "instruction": "Come coltivare cibo con 100 euro al mese?",
+    "input": "",
+    "output": "Coltiva ortaggi in balcone o in orti urbani: pomodori, insalata, erbe aromatiche, patate e fagioli sono economici e nutrienti. Usa compost fatto in casa, scambia semi con altri coltivatori, raccogli erbe spontanee commestibili (tarassaco, ortica), e conserva il cibo in scatola o sotto olio per non sprecarlo."
+  },
+  {
+    "instruction": "Come svagarsi spendendo 0 euro al mese?",
+    "input": "",
+    "output": "Biblioteche pubbliche (libri, cinema, musica), parchi e giardini, mostre gratuiti nei musei con ingressi liberi, camminate nella natura, gruppi di volontariato (conosci persone e ricevi pasto se disponibile), eventi culturali comunali, concerti in piazza, e riunioni con amici a casa propria invece che al bar."
+  },
+  {
+    "instruction": "Come barattare beni e servizi per sopravvivere?",
+    "input": "",
+    "output": "Unisci a gruppi di scambio locali: offri competenze (riparazioni, pulizie, babysitter) in cambio di cibo, vestiti o altri beni. Usa piattaforme di baratto online, partecipa a comunità di condivisione (es. Freecycle), offri aiuto in cambio di un pasto, e crea una rete di fiducia con vicini e amici per supporto reciproco."
+  },
+  {
+    "instruction": "Come preparare pasti nutrienti con meno di 2 euro al giorno?",
+    "input": "",
+    "output": "Pasta e fagioli, riso e verdure, uova con patate, polenta e formaggio, minestrone di verdure, zuppe di legumi, pane raffermo con pomodoro e olio. Acquista all'ingrosso quando possibile, usa alimenti stagionali e locali, evita prodotti trasformati, e cucina in grandi quantità per risparmiare tempo ed energia."
+  },
+  {
+    "instruction": "Cose evitare assolutamente con 100 euro al mese?",
+    "input": "",
+    "output": "Non comprare cibo pronto o takeaway, non bere alcolici o bibite zuccherate, non acquistare vestiti nuovi o oggetti superflui, non pagare servizi streaming o abbonamenti, non usare mezzi privati se non strettamente necessario, non sprecare cibo, non comprare prodotti di marca, e evitare debiti o prestiti."
+  },
+  {
+    "instruction": "Come guadagnare extra con 100 euro al mese?",
+    "input": "",
+    "output": "Offri servizi informali: babysitter, pulizie, riparazioni, consegne a domicilio, vendita di oggetti usati online, partecipazione a sondaggi retribuiti, babysitting a ore, vendita di prodotti fatti a mano, raccolta differenziata di materiali riciclabili, e lavoretti saltuari come aiuto a anziani o giardinaggio."
+  },
+  {
+    "instruction": "Quali alimenti comprare con 100 euro al mese?",
+    "input": "",
+    "output": "Pasta, riso, patate, legumi in scatola o secchi, uova, pollo o pesce azzurro surgelato (più economico), verdure stagionali in offerta, pane raffermo, farina, olio d'oliva in taniche grandi, pomodori pelati, conserve di legumi, acqua del rubinetto. Evita snack, carne rossa, prodotti surgelati elaborati e bibite."
+  },
+  {
+    "instruction": "Come risparmiare su igiene e pulizia?",
+    "input": "",
+    "output": "Usa sapone di Marsiglia sia per il corpo che per i piatti, shampoo solido (dura di più), aceto per pulire, bicarbonato come dentifricio o detergente, panni riutilizzabili invece di carta, compra prodotti sfusi quando possibile, usa acqua e limone per molte pulizie, e ricicla flaconi vuoti con prodotti concentrati."
+  },
+  {
+    "instruction": "Come sopravvivere a Natale con 100 euro al mese?",
+    "input": "",
+    "output": "Fai regali fatti a mano, partecipa a iniziative di solidarietà invece di comprare regali, usa offerte dei supermercati per il cenone, organizza scambio regali con amici (ognuno porta qualcosa), approfitta di pasti comunitari organizzati dal comune, e ricorda che il Natale è anche condivisione, non solo consumismo."
+  },
+  {
+    "instruction": "Come gestire l'affitto con 100 euro al mese?",
+    "input": "",
+    "output": "Cerca alloggi popolari o case popolari a canone calmierato, condividi l'affitto con altre persone, chiedi contributi al comune per l'affitto, offri servizi in cambio di sconti sull'affitto (es. pulizie, giardinaggio), o se possibile stabilisciti in contesti familiari gratuiti. Evita affitti neri: sono pericolosi e senza garanzie."
+  },
+  {
+    "instruction": "Come risparmiare su telefonia e internet con 100 euro al mese?",
+    "input": "",
+    "output": "Usa SIM con tariffe ricaricabili economiche (5-10 euro al mese), usa il wi-fi di biblioteche o bar per connetterti, evita dati mobili quando possibile, non acquistare telefoni nuovi ma riparane uno vecchio, e per le chiamate usa app gratuite come WhatsApp quando c'è connessione wi-fi."
+  },
+  {
+    "instruction": "Come risparmiare su palestra e sport con 100 euro al mese?",
+    "input": "",
+    "output": "Cammina, corri o usa attrezzi gratuiti nei parchi, segui video di allenamento online gratuiti, usa strutture comunali (piscine comunali a prezzi ridotti), unisciti a gruppi di corsa o camminata gratuiti, e per lo stretching o yoga segui tutorial su YouTube. Lo sport è possibile anche senza soldi."
+  },
+  {
+    "instruction": "Come pianificare la spesa con 100 euro al mese?",
+    "input": "",
+    "output": "Fai una lista rigorosa prima di entrare al supermercato, confronta i prezzi al kg, acquista marche private, compra solo in offerta, evita il centro città (prezzi più alti), utilizza app per coupon, non andare a fare la spesa quando hai fame, e pianifica i pasti settimanali per non comprare più del necessario."
+  },
+  {
+    "instruction": "Come evitare debiti con 100 euro al mese?",
+    "input": "",
+    "output": "Non chiedere prestiti se non per emergenze mediche gravi, non usare carte di credito se non hai la certezza di ripagare, evita finanziamenti per beni non essenziali, non farti tentare da offerte a rate, e se hai debiti esistevi contatta i servizi sociali per un piano di rientro assistito. Il debito è la via più veloce verso la povertà."
+  },
+  {
+    "instruction": "Come trovare supporto psicologico gratuito?",
+    "input": "",
+    "output": "Rivolgiti ai servizi pubblici: consultori psicologici comunali, centri di salute mentale pubblici, associazioni di volontariato come Samaritans o Telefono Verde, gruppi di auto-aiuto, parrocchie con servizi di ascolto, e in caso di emergenza chiama il 112 o il 116 117 (helpline salute mentale)."
+  },
+  {
+    "instruction": "Come riscaldare casa spendendo poco?",
+    "input": "",
+    "output": "Usa coperte pesanti, indossa più vestiti in casa, chiudi porte e finestre, usa tende spesse per isolare, accendi il riscaldamento solo nelle ore necessarie, e se possibile usa stufe a legna o pellet (costo minore di gas). In caso di emergenza, contatta i servizi sociali per buoni per il riscaldamento."
+  },
+  {
+    "instruction": "Come risparmiare su lavanderia con 100 euro al mese?",
+    "input": "",
+    "output": "Lava i vestiti a mano quando possibile, usa lavatrici solo a pieno carico, scegli programmi eco a basse temperature, asciuga i vestiti all'aria invece che in asciugatrice, non usare ammorbidente (le fibre si rovineranno meno), e ripara i capi invece di sostituirli quando si rompono."
+  },
+  {
+    "instruction": "Come organizzare la giornata per risparmiare energia?",
+    "input": "",
+    "output": "Cucina e usa elettrodomestici solo quando necessario e a pieno carico, spegni luci in stanze vuote, approfitta della luce naturale, carica telefono e dispositivi quando sei in biblioteca o al bar, usa il forno una sola volta per più pietanze, e programma le attività per sfruttare le ore di sole se usi pannelli solari."
+  },
+  {
+    "instruction": "Come ottenere vestiti gratuiti?",
+    "input": "",
+    "output": "Partecipa a iniziative di raccolta vestiti, chiedi a parenti e amici se hanno capi che non usano, usa i mercatini dell'usato dove si trovano capi a pochi euro, unisciti a gruppi Facebook di regalo abiti, e cerca progetti di riciclo tessile organizzati da parrocchie o associazioni."
+  },
+  {
+    "instruction": "Come sopravvivere in vacanza con 100 euro al mese?",
+    "input": "",
+    "output": "Non andare in vacanza: resta nella tua città, approfitta di offerte culturali gratuite, fai campeggio leggero o bivacco in zone autorizzate, visita amici in altre città scambiando ospitalità (couchsurfing), e ricorda che la vacanza è anche riposo e non solo viaggi costosi."
+  },
+  {
+    "instruction": "Come risparmiare su animali domestici con 100 euro al mese?",
+    "input": "",
+    "output": "Se hai un animale, mangia anche tu gli stessi alimenti economici (riso, pasta, uova) per non comprare cibo specifico costoso, curalo con rimedi naturali quando possibile, chiedi al veterinario convenzionato ASL se esiste, sterilizza per evitare cucciate, e considera che con 100 euro al mese forse non è il momento di avere animali."
+  },
+  {
+    "instruction": "Come risparmiare su tecnologia con 100 euro al mese?",
+    "input": "",
+    "output": "Non comprare dispositivi nuovi, usa il telefono che hai finché funziona, ripara invece di sostituire, usa software open source e gratuito, sfrutta servizi cloud gratuiti per backup, non acquistare app a pagamento se esistono alternative gratuite, e ricicla vecchi dispositivi per parti di ricambio."
+  },
+  {
+    "instruction": "Come evitare sprechi alimentari con 100 euro al mese?",
+    "input": "",
+    "output": "Pianifica i pasti, conserva gli avanzi, compra solo quello che mangi, usa gli alimenti in scadenza prima, congela il pane e le verdure, fai la spesa con la lista, non comprare se non hai fame, e impara a cucinare con gli avanzi (es. riso avanzato per crocchette, pane raffermo per bruschetta)."
+  },
+  {
+    "instruction": "Come trovare alloggi temporanei economici?",
+    "input": "",
+    "output": "Cerca case popolari, contatta associazioni come la Croce Rossa o Caritas per alloggi temporanei, usa piattaforme di condivisione casa (es. Weflating), chiedi a parenti o amici, e in caso di emergenza contatta il numero verde del tuo comune per servizi sociali di emergenza abitativa."
+  },
+  {
+    "instruction": "Come gestire i figli con 100 euro al mese?",
+    "input": "",
+    "output": "Richiedi il bonus bebè, le mense scolastiche gratuite, il fondo sociale per minori, vestiti da amici o parenti, giocattoli riciclati, attività extrascolastiche comunali gratuite, e leggi ad alta voce invece di comprare libri. I figli hanno bisogno di affetto e tempo, non di soldi."
+  },
+  {
+    "instruction": "Come risparmiare su assicurazioni con 100 euro al mese?",
+    "input": "",
+    "output": "Confronta sempre le polizze online, scegli franchigie più alte per pagare meno, unisci più assicurazioni nella stessa compagnia per sconti, e se non hai obblighi legali valuta se serve davvero un'assicurazione auto o casa. Se non puoi permettertela, valuta polizze più economiche o RC auto sospesa se non usi l'auto."
+  },
+  {
+    "instruction": "Come fare la spesa intelligente con 100 euro al mese?",
+    "input": "",
+    "output": "Vai nei discount alimentari, compra in confezioni grandi, evita prodotti bio costosi se non strettamente necessario, compra verdure di stagione e locali, usa la lista della spesa, non comprare snack o cibo pronto, e cucina tutto in casa. Ogni euro deve essere speso per cibo nutriente, non per comodità."
+  },
+  {
+    "instruction": "Come chiedere aiuto senza vergogna con 100 euro al mese?",
+    "input": "",
+    "output": "Chiedere aiuto è un diritto, non una debolezza. Rivolgiti ai servizi sociali del tuo comune, alla Caritas, alla Croce Rossa, ai centri di ascolto parrocchiali, alle ONLUS locali, e a eventuali progetti del territorio. Non rimanere solo: ci sono persone e istituzioni che possono aiutarti."
+  },
+  {
+    "instruction": "Come risparmiare su servizi digitali con 100 euro al mese?",
+    "input": "",
+    "output": "Non pagare per servizi streaming, usa YouTube e biblioteche digitali gratuite, non acquistare app a pagamento, usa email e cloud gratuiti, naviga in biblioteca o in luoghi pubblici con wi-fi libero, e usa software open source. Non serve spendere per intrattenimento digitale: c'è molto gratis."
+  },
+  {
+    "instruction": "Come sopravvivere in città con 100 euro al mese?",
+    "input": "",
+    "output": "Sfrutta i servizi pubblici gratuiti: biblioteche, musei con ingressi gratuiti, parchi, mercati contadini per cibo economico, mense sociali, e centri sociali per aggregazione. Riduci i costi di trasporto camminando, cucina in casa, e usa risorse condivise invece di comprare."
+  },
+  {
+    "instruction": "Come risparmiare su regali e compleanni con 100 euro al mese?",
+    "input": "",
+    "output": "Fai regali fatti a mano o esperienze invece di oggetti costosi, organizza scambio regali con amici, partecipa a iniziative di solidarietà, usa coupon e offerte, e ricorda che il pensiero conta più del valore economico. Non indebitarti per fare regali: non ne vale la pena."
+  },
+  {
+    "instruction": "Come mantenere la salute con 100 euro al mese?",
+    "input": "",
+    "output": "Cammina ogni giorno, mangia sano e semplice, dormi bene, evita alcol e fumo, bevi acqua del rubinetto, usa i servizi sanitari pubblici, e non auto-medicarti con medicine non necessarie. La salute è soprattutto prevenzione: muoviti, mangia bene e non sprecare soldi in cure evitabili."
+  },
+  {
+    "instruction": "Come gestire l'emergenza se finisco i soldi con 100 euro al mese?",
+    "input": "",
+    "output": "Chiama immediatamente il numero verde del tuo comune per servizi sociali, rivolgiti alla Caritas o alla Croce Rossa, cerca le mense per i poveri, chiedi aiuto a parenti o amici, e se hai figli contatta i servizi minori. Non rimanere solo: ci sono strutture apposta per emergenze economiche."
+  },
+  {
+    "instruction": "Come risparmiare su animali da compagnia con 100 euro al mese?",
+    "input": "",
+    "output": "Se non puoi permettertelo, non prendere animali. Se già li hai, mangia anche tu cibo economico (riso, pasta, uova) invece di cibo per animali costoso, sterilizza per evitare spese future, curalo con rimedi naturali quando possibile, e chiedi al veterinario convenzionato ASL."
+  },
+  {
+    "instruction": "Come barattare servizi invece di pagare?",
+    "input": "",
+    "output": "Offri le tue competenze (riparazioni, pulizie, giardinaggio, babysitting, lezioni) in cambio di cibo, vestiti, riparazioni o altri servizi. Usa gruppi locali di scambio, piattaforme di baratto online, e costruisci una rete di persone con cui scambiare valore senza denaro."
+  },
+  {
+    "instruction": "Come risparmiare su energia rinnovabile fai-da-te?",
+    "input": "",
+    "output": "Costruisci piccoli pannelli solari fai-da-te per caricare telefono, usa lampade a carica solare, costruisci una turbina eolica piccola se hai vento, raccogli acqua piovana, usa il sole per asciugare i vestiti, e sfrutta la luce naturale al massimo. Non serve spendere migliaia di euro: soluzioni low-cost esistono."
+  }
+]

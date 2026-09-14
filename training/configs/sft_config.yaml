@@ -1,16 +1,21 @@
-model_name: "mistralai/Mistral-7B-v0.3"
-dataset_name: "username/italian-instructions-dataset"
-output_dir: "./models/adapter/italian-llm-7b"
-max_seq_length: 2048
+# Per budget limitato (100€/mese) usa modelli leggeri girabili in locale su CPU/Metal
+# Modelli consigliati: deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B, microsoft/Phi-2, Qwen/Qwen2.5-1.5B-Instruct
+model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
+# Usa il dataset locale invece di quello remoto
+dataset_path: "data/processed/survival_instructions.json"
+output_dir: "./models/adapter/pippo-survival"
+max_seq_length: 1024
 
 training:
   epochs: 3
-  batch_size: 4
-  gradient_accumulation: 4
+  batch_size: 2
+  gradient_accumulation: 8
   learning_rate: 2e-4
   warmup_steps: 100
   logging_steps: 10
   save_steps: 500
+  fp16: true
+  optim: "paged_adamw_8bit"
 
 lora:
   r: 8

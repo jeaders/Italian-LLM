@@ -49,3 +49,56 @@ def test_chat_datetime():
     assert resp.status_code == 200
     data = resp.json()
     assert "datetime" in data["tools_used"]
+
+
+def test_budget_status():
+    resp = client.get("/budget/status")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "monthly_budget" in data
+    assert "spent" in data
+    assert "remaining" in data
+    assert data["monthly_budget"] == 100.0
+
+
+def test_budget_add_expense():
+    resp = client.post("/budget/expenses", json={"amount": 5.5, "category": "cibo", "description": "pasta"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "ok"
+    assert data["expense"]["amount"] == 5.5
+    assert data["expense"]["category"] == "cibo"
+
+
+def test_budget_status_after_expense():
+    resp = client.get("/budget/status")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["spent"] >= 5.5
+    assert data["remaining"] <= 94.5
+
+
+def test_budget_advice():
+    resp = client.get("/budget/advice")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "status" in data
+    assert "tip" in data
+    assert "actions" in data
+
+
+def test_budget_reset_requires_confirm():
+    resp = client.post("/budget/reset", json={"confirm": False})
+    assert resp.status_code == 400
+
+
+def test_budget_reset():
+    resp = client.post("/budget/expenses", json={"amount": 1.0, "category": "test", "description": "reset-test"})
+    assert resp.status_code == 200
+    resp = client.post("/budget/reset", json={"confirm": True})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["status"] == "reset"
+    status = client.get("/budget/status").json()
+    assert status["spent"] == 0.0
+    assert status["remaining"] == 100.0
