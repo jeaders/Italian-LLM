@@ -46,10 +46,6 @@
       border: 1px solid rgba(255, 255, 255, 0.12);
     }
 
-    .brand-gradient {
-      background: linear-gradient(135deg, #00e68a, #6366f1);
-    }
-
     .text-gradient {
       background: linear-gradient(135deg, #00e68a, #6366f1);
       -webkit-background-clip: text;
@@ -167,18 +163,6 @@
     @keyframes reveal {
       to { opacity: 1; transform: translateY(0); }
     }
-
-    .loader-dot {
-      animation: loader 1.2s ease-in-out infinite;
-    }
-
-    .loader-dot:nth-child(2) { animation-delay: 0.15s; }
-    .loader-dot:nth-child(3) { animation-delay: 0.3s; }
-
-    @keyframes loader {
-      0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
-      40% { transform: scale(1); opacity: 1; }
-    }
   </style>
 </head>
 <body class="text-slate-100 min-h-screen antialiased">
@@ -207,6 +191,11 @@
               <div class="w-2 h-2 rounded-full bg-neon-500 pulse-ring"></div>
               <span id="monthLabel" class="text-xs text-slate-300 font-medium">-</span>
             </div>
+            <button id="exportBtn" class="category-pill text-[11px] px-3 py-1.5 rounded-full text-slate-300">Esporta JSON</button>
+            <label class="category-pill text-[11px] px-3 py-1.5 rounded-full text-slate-300 cursor-pointer">
+              Importa JSON
+              <input id="importInput" type="file" accept="application/json" class="hidden" />
+            </label>
           </div>
         </div>
       </header>
@@ -337,7 +326,7 @@
       </div>
 
       <footer class="mt-10 text-center">
-        <p class="text-[10px] text-slate-600 tracking-wide">Budget Tracker — Sopravvivere con 100€ al mese</p>
+        <p class="text-[10px] text-slate-600 tracking-wide">Budget Tracker — Standalone · Sopravvivere con 100€ al mese</p>
       </footer>
     </div>
   </div>
@@ -347,12 +336,41 @@
   </div>
 
   <script>
-    const API_BASE = (location.protocol === 'https:' ? 'https://' : 'http://') + location.hostname + ':8000';
+    const STORAGE_KEY = 'budget_tracker_v1';
     const COLORS = ['#00e68a', '#6366f1', '#f43f5e', '#f59e0b', '#06b6d4', '#8b5cf6', '#ec4899', '#10b981'];
     const CATEGORY_EMOJI = {
       cibo: '🥦', affitto: '🏠', bollette: '💡', trasporti: '🚌', salute: '💊',
       igiene: '🧼', svago: '🎮', vestiti: '👕', animali: '🐾', altro: '📦'
     };
+
+    function currentMonthKey() {
+      const d = new Date();
+      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    }
+
+    function loadStore() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function saveStore(store) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    }
+
+    function getMonthData() {
+      const store = loadStore();
+      return store[currentMonthKey()] || { expenses: [] };
+    }
+
+    function setMonthData(data) {
+      const store = loadStore();
+      store[currentMonthKey()] = data;
+      saveStore(store);
+    }
 
     function fmt(n) {
       return Number(n).toFixed(2) + ' €';
@@ -372,51 +390,66 @@
       setTimeout(() => toast.classList.add('hidden'), duration);
     }
 
-    async function loadStatus() {
-      try {
-        const res = await fetch(API_BASE + '/budget/status');
-        const data = await res.json();
-        const spent = Number(data.spent || 0);
-        const remaining = Number(data.remaining || 100);
-        const percent = data.percentage_used || 0;
-        const cappedPercent = Math.min(percent, 100);
-        const circumference = 2 * Math.PI * 48;
-        const offset = circumference - (cappedPercent / 100) * circumference;
-
-        document.getElementById('spent').textContent = fmt(spent);
-        const remainingEl = document.getElementById('remaining');
-        remainingEl.textContent = fmt(remaining);
-        remainingEl.className = 'text-4xl font-bold ' + (remaining < 0 ? 'text-alert-500' : 'text-neon-400');
-
-        document.getElementById('progressRing').style.strokeDashoffset = offset;
-        document.getElementById('progressRing').setAttribute('stroke', remaining < 0 ? '#ff4d4d' : '#00e68a');
-        document.getElementById('percentLabel').textContent = Math.round(cappedPercent) + '%';
-        document.getElementById('monthLabel').textContent = data.current_month || '-';
-
-        const alertBox = document.getElementById('alertBox');
-        if (data.alert) {
-          document.getElementById('alert').textContent = data.alert;
-          alertBox.classList.remove('hidden');
-        } else {
-          alertBox.classList.add('hidden');
-        }
-
-        return data;
-      } catch (e) {
-        document.getElementById('spent').textContent = 'Errore';
-        document.getElementById('remaining').textContent = 'Errore';
-        return null;
-      }
+    function generateTip(remaining, byCategory) {
+      const entries = Object.entries(byCategory || {});
+      if (remaining < 0) return 'Hai superato il budget. Taglia subito: cibo fuori casa, abbonamenti, trasporti non essenziali. Rivolgiti ai servizi sociali e ai banchi alimentari.';
+      if (remaining < 10) return 'Budget critico. Acquista solo alimenti base: pasta, riso, legumi, uova. Usa i banchi alimentari e le mense sociali. Evita qualsiasi spesa non essenziale.';
+      if (remaining < 25) return 'Budget sotto pressione. Pianifica i pasti settimanali, evita sprechi, compra solo in discount, e sospendi tutti gli abbonamenti e servizi a pagamento.';
+      const food = byCategory['cibo'] || 0;
+      if (food > 35) return 'Stai spendendo troppo per cibo. Passa a discount, compra all\'ingrosso, cucina sempre a casa e evita takeaway e snack.';
+      const transport = byCategory['trasporti'] || 0;
+      if (transport > 15) return 'Riduci i trasporti: usa bici, mezzi pubblici o car sharing. Cammina per tragitti brevi e organizza passaggi con colleghi.';
+      return 'Continua così: monitora ogni spesa, cerca offerte, e ricorda che ogni euro risparmiato ti aiuta a raggiungere la fine del mese.';
     }
 
-    async function loadAdvice() {
-      try {
-        const res = await fetch(API_BASE + '/budget/advice');
-        const data = await res.json();
-        document.getElementById('advice').textContent = data.tip || 'Nessun consiglio disponibile.';
-      } catch (e) {
-        document.getElementById('advice').textContent = 'Consiglio non disponibile.';
+    function loadStatus() {
+      const data = getMonthData();
+      const spent = data.expenses.reduce((sum, ex) => sum + Number(ex.amount || 0), 0);
+      const remaining = 100 - spent;
+      const percent = Math.min((spent / 100) * 100, 100);
+      const circumference = 2 * Math.PI * 48;
+      const offset = circumference - (percent / 100) * circumference;
+
+      document.getElementById('spent').textContent = fmt(spent);
+      const remainingEl = document.getElementById('remaining');
+      remainingEl.textContent = fmt(remaining);
+      remainingEl.className = 'text-4xl font-bold ' + (remaining < 0 ? 'text-alert-500' : 'text-neon-400');
+
+      document.getElementById('progressRing').style.strokeDashoffset = offset;
+      document.getElementById('progressRing').setAttribute('stroke', remaining < 0 ? '#ff4d4d' : '#00e68a');
+      document.getElementById('percentLabel').textContent = Math.round(percent) + '%';
+      document.getElementById('monthLabel').textContent = currentMonthKey();
+
+      const alertBox = document.getElementById('alertBox');
+      const alertEl = document.getElementById('alert');
+      if (remaining < 0) {
+        alertEl.textContent = 'Attenzione: hai superato il budget di ' + fmt(Math.abs(remaining)) + '!';
+        alertBox.classList.remove('hidden');
+      } else if (percent > 75) {
+        alertEl.textContent = 'Attenzione: hai speso il ' + Math.round(percent) + '% del budget, ti rimangono solo ' + fmt(remaining) + '.';
+        alertBox.classList.remove('hidden');
+      } else {
+        alertBox.classList.add('hidden');
       }
+
+      return { spent, remaining, percentage_used: percent, by_category: byCategoryFromExpenses(data.expenses), current_month: currentMonthKey(), alert: remaining < 0 || percent > 75 ? alertEl.textContent : null, expenses: data.expenses };
+    }
+
+    function byCategoryFromExpenses(expenses) {
+      const map = {};
+      expenses.forEach(ex => {
+        const key = String(ex.category || 'altro').toLowerCase();
+        map[key] = Number((map[key] || 0) + Number(ex.amount || 0)).toFixed(2);
+      });
+      return map;
+    }
+
+    function loadAdvice() {
+      const data = getMonthData();
+      const spent = data.expenses.reduce((sum, ex) => sum + Number(ex.amount || 0), 0);
+      const remaining = 100 - spent;
+      const byCategory = byCategoryFromExpenses(data.expenses);
+      document.getElementById('advice').textContent = generateTip(remaining, byCategory);
     }
 
     function buildDonut(byCategory) {
@@ -468,40 +501,35 @@
       }).join('');
     }
 
-    async function loadExpenses() {
-      try {
-        const res = await fetch(API_BASE + '/budget/status');
-        const data = await res.json();
-        const container = document.getElementById('expenses');
-        const expenses = (data.expenses || []).slice().reverse();
-        if (!expenses.length) {
-          container.innerHTML = `<div id="emptyState" class="flex flex-col items-center justify-center py-10 text-slate-500 gap-2">
-            <div class="text-2xl">📭</div>
-            <div class="text-xs">Nessuna spesa registrata</div>
-          </div>`;
-          return;
-        }
-
-        container.innerHTML = expenses.map((ex, idx) => {
-          const emoji = CATEGORY_EMOJI[String(ex.category || 'altro').toLowerCase()] || '📦';
-          const colorIdx = Math.abs(hashCode(ex.category || 'altro')) % COLORS.length;
-          const color = COLORS[colorIdx];
-          return `<div class="expense-card rounded-2xl px-4 py-3 flex items-center justify-between gap-3" style="animation: reveal 0.45s cubic-bezier(0.22,1,0.36,1) ${Math.min(idx * 0.03, 0.25)}s forwards; opacity:0;">
-            <div class="flex items-center gap-3 min-w-0">
-              <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm shrink-0" style="background:${color}20; color:${color}">
-                ${emoji}
-              </div>
-              <div class="min-w-0">
-                <div class="text-sm text-slate-200 truncate">${escapeHtml(ex.description || ex.category || 'Spesa')}</div>
-                <div class="text-[10px] text-slate-500">${new Date(ex.date).toLocaleString('it-IT')} · <span class="capitalize">${escapeHtml(ex.category || 'altro')}</span></div>
-              </div>
-            </div>
-            <div class="text-sm font-semibold text-alert-500 shrink-0">-${fmt(ex.amount).replace(' €','')} €</div>
-          </div>`;
-        }).join('');
-      } catch (e) {
-        document.getElementById('expenses').innerHTML = '<div class="text-xs text-alert-500">Errore nel caricamento.</div>';
+    function loadExpenses() {
+      const data = getMonthData();
+      const container = document.getElementById('expenses');
+      const expenses = data.expenses.slice().reverse();
+      if (!expenses.length) {
+        container.innerHTML = `<div id="emptyState" class="flex flex-col items-center justify-center py-10 text-slate-500 gap-2">
+          <div class="text-2xl">📭</div>
+          <div class="text-xs">Nessuna spesa registrata</div>
+        </div>`;
+        return;
       }
+
+      container.innerHTML = expenses.map((ex, idx) => {
+        const emoji = CATEGORY_EMOJI[String(ex.category || 'altro').toLowerCase()] || '📦';
+        const colorIdx = Math.abs(hashCode(ex.category || 'altro')) % COLORS.length;
+        const color = COLORS[colorIdx];
+        return `<div class="expense-card rounded-2xl px-4 py-3 flex items-center justify-between gap-3" style="animation: reveal 0.45s cubic-bezier(0.22,1,0.36,1) ${Math.min(idx * 0.03, 0.25)}s forwards; opacity:0;">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm shrink-0" style="background:${color}20; color:${color}">
+              ${emoji}
+            </div>
+            <div class="min-w-0">
+              <div class="text-sm text-slate-200 truncate">${escapeHtml(ex.description || ex.category || 'Spesa')}</div>
+              <div class="text-[10px] text-slate-500">${new Date(ex.date).toLocaleString('it-IT')} · <span class="capitalize">${escapeHtml(ex.category || 'altro')}</span></div>
+            </div>
+          </div>
+          <div class="text-sm font-semibold text-alert-500 shrink-0">-${fmt(ex.amount).replace(' €','')} €</div>
+        </div>`;
+      }).join('');
     }
 
     function hashCode(str) {
@@ -525,22 +553,20 @@
       submitBtn.disabled = true;
       submitBtn.textContent = 'Salvataggio...';
 
-      try {
-        const res = await fetch(API_BASE + '/budget/expenses', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount, category, description }),
-        });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        document.getElementById('expenseForm').reset();
-        showToast('Spesa aggiunta');
-        await refreshAll();
-      } catch (err) {
-        showToast('Errore: ' + err.message, 3000);
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-      }
+      const data = getMonthData();
+      data.expenses.push({
+        amount,
+        category,
+        description,
+        date: new Date().toISOString()
+      });
+      setMonthData(data);
+
+      document.getElementById('expenseForm').reset();
+      showToast('Spesa aggiunta');
+      refreshAll();
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
     });
 
     document.querySelectorAll('#quickCategories button').forEach(btn => {
@@ -552,31 +578,52 @@
 
     document.getElementById('resetBtn').addEventListener('click', async () => {
       if (!confirm('Resettare il budget per il nuovo mese?')) return;
-      try {
-        const res = await fetch(API_BASE + '/budget/reset', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ confirm: true }),
-        });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        showToast('Budget resettato');
-        await refreshAll();
-      } catch (err) {
-        showToast('Errore reset: ' + err.message, 3000);
-      }
+      setMonthData({ expenses: [] });
+      showToast('Budget resettato');
+      refreshAll();
     });
 
-    async function refreshAll() {
-      const status = await loadStatus();
-      await loadAdvice();
-      await loadExpenses();
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const data = getMonthData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'budget-' + currentMonthKey() + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Esportazione completata');
+    });
+
+    document.getElementById('importInput').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          if (!Array.isArray(parsed.expenses)) throw new Error('Formato non valido');
+          setMonthData({ expenses: parsed.expenses });
+          showToast('Importazione completata');
+          refreshAll();
+        } catch (err) {
+          showToast('Errore di importazione: ' + err.message, 3000);
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    function refreshAll() {
+      const status = loadStatus();
+      loadAdvice();
+      loadExpenses();
       if (status && status.by_category) {
         buildDonut(status.by_category);
       }
     }
 
     refreshAll();
-    setInterval(refreshAll, 20000);
   </script>
 </body>
 </html>

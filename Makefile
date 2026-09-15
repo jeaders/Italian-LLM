@@ -1,4 +1,4 @@
-.PHONY: help install train inference deploy clean ui setup-ollama
+.PHONY: help install train inference deploy clean ui setup-ollama deploy-netlify
 
 help:
 	@echo "Italian LLM - Available commands:"
@@ -9,6 +9,7 @@ help:
 	@echo "  make ui            - Open local UI"
 	@echo "  make setup-ollama  - Install and pull Ollama model"
 	@echo "  make deploy        - Deploy with Docker"
+	@echo "  make deploy-netlify - Preview/deploy frontend on Netlify"
 	@echo "  make clean         - Clean temporary files"
 	@echo "  make data          - Download datasets"
 
@@ -36,6 +37,9 @@ setup-ollama:
 
 deploy:
 	docker-compose up --build
+
+deploy-netlify:
+	netlify deploy --prod --dir=frontend
 
 data:
 	python data/download_data.py

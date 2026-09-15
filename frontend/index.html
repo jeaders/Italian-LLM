@@ -66,6 +66,10 @@
           <input id="useRag" type="checkbox" class="accent-brand-500" /> RAG
         </label>
         <label class="flex items-center gap-2 text-sm text-slate-300">
+          <input id="useGroq" type="checkbox" class="accent-brand-500" /> Groq
+        </label>
+        <input id="groqKey" type="password" placeholder="Groq API key" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-brand-500 w-44" />
+        <label class="flex items-center gap-2 text-sm text-slate-300">
           Temperatura
           <input id="temperature" type="number" step="0.1" min="0" max="1.5" value="0.7" class="w-16 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200" />
         </label>
@@ -79,6 +83,8 @@
 
   <script>
     const API_BASE = (location.protocol === 'https:' ? 'https://' : 'http://') + location.hostname + ':8000';
+    const GROQ_KEY = localStorage.getItem('groq_api_key') || '';
+    const GROQ_MODEL = 'llama-3.1-8b-instant';
     const chatEl = document.getElementById('chat');
     const emptyState = document.getElementById('emptyState');
     const form = document.getElementById('chatForm');
@@ -88,6 +94,21 @@
     const backendLabel = document.getElementById('backendLabel');
     const toolBadge = document.getElementById('toolBadge');
     const historyEl = document.getElementById('history');
+    const groqKeyInput = document.getElementById('groqKey');
+    const useGroqInput = document.getElementById('useGroq');
+
+    if (groqKeyInput && GROQ_KEY) {
+      groqKeyInput.value = GROQ_KEY;
+    }
+    if (useGroqInput && GROQ_KEY) {
+      useGroqInput.checked = true;
+    }
+
+    if (groqKeyInput) {
+      groqKeyInput.addEventListener('input', () => {
+        localStorage.setItem('groq_api_key', groqKeyInput.value.trim());
+      });
+    }
 
     let conversationId = 'default';
     let conversations = {};
@@ -152,6 +173,13 @@
     }
 
     async function checkHealth() {
+      const useGroq = document.getElementById('useGroq')?.checked;
+      if (useGroq) {
+        apiStatus.textContent = 'groq';
+        backendLabel.textContent = 'Backend: Groq';
+        apiStatus.className = 'text-neon-400';
+        return;
+      }
       try {
         const res = await fetch(API_BASE + '/health');
         const data = await res.json();
@@ -174,27 +202,54 @@
       typingIndicator();
       const useWebSearch = document.getElementById('webSearch').checked;
       const useRag = document.getElementById('useRag').checked;
+      const useGroq = document.getElementById('useGroq').checked;
       const temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
+      const groqKey = (document.getElementById('groqKey')?.value || '').trim();
 
       try {
-        const res = await fetch(API_BASE + '/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message, conversation_id: conversationId, use_web_search: useWebSearch, use_rag: useRag, max_tokens: 512, temperature }),
-        });
-        const data = await res.json();
-        removeTypingIndicator();
-        appendBubble('assistant', data.response || 'Errore', { tools_used: data.tools_used, sources: data.sources });
-        conversationId = data.conversation_id;
-        const history = (conversations[conversationId] || []).concat([{ user: message, assistant: data.response }]);
-        saveConversation(conversationId, history.slice(-20));
-        if (data.tools_used && data.tools_used.length) {
-          toolBadge.textContent = 'Tool: ' + data.tools_used.join(', ');
-          toolBadge.classList.remove('hidden');
+        if (useGroq) {
+          if (!groqKey) throw new Error('Inserisci la API key di Groq');
+          const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer ' + groqKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: GROQ_MODEL,
+              messages: [{ role: 'user', content: message }],
+              max_tokens: 512,
+              temperature
+            })
+          });
+          if (!groqRes.ok) {
+            const err = await groqRes.text();
+            throw new Error('Groq ' + groqRes.status + ': ' + err);
+          }
+          const groqData = await groqRes.json();
+          const reply = groqData.choices?.[0]?.message?.content || 'Errore nella risposta Groq';
+          removeTypingIndicator();
+          appendBubble('assistant', reply);
+          conversationId = conversationId || 'default';
+          const history = (conversations[conversationId] || []).concat([{ user: message, assistant: reply }]);
+          saveConversation(conversationId, history.slice(-20));
+        } else {
+          const res = await fetch(API_BASE + '/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, conversation_id: conversationId, use_web_search: useWebSearch, use_rag: useRag, max_tokens: 512, temperature }),
+          });
+          const data = await res.json();
+          removeTypingIndicator();
+          appendBubble('assistant', data.response || 'Errore', { tools_used: data.tools_used, sources: data.sources });
+          conversationId = data.conversation_id;
+          const history = (conversations[conversationId] || []).concat([{ user: message, assistant: data.response }]);
+          saveConversation(conversationId, history.slice(-20));
+          if (data.tools_used && data.tools_used.length) {
+            toolBadge.textContent = 'Tool: ' + data.tools_used.join(', ');
+            toolBadge.classList.remove('hidden');
+          }
         }
       } catch (e) {
         removeTypingIndicator();
-        appendBubble('assistant', 'Errore di connessione: ' + e.message);
+        appendBubble('assistant', 'Errore: ' + e.message);
       } finally {
         sendBtn.disabled = false;
       }

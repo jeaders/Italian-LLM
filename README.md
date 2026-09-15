@@ -85,6 +85,8 @@ open frontend/index.html
 open frontend/budget_tracker.html
 ```
 
+> Se Ollama non si installa (es. macOS 12), usa la modalità Groq nel frontend: vedi sezione **Netlify + Groq**.
+
 ### Opzione 2: Installazione completa
 
 ```bash
@@ -233,6 +235,8 @@ uvicorn api.main:app --reload --port 8000
 open frontend/index.html
 ```
 
+> Nota: Ollama richiede macOS Sonoma o superiore. Su macOS 12/13 usa la modalità Groq dal frontend.
+
 ### Docker
 
 ```bash
@@ -245,6 +249,44 @@ docker-compose up --build
 flyctl launch
 flyctl deploy
 ```
+
+### Netlify + Groq (frontend statico, provider gratuito)
+
+```bash
+# 1) Installa la CLI di Netlify
+npm install -g netlify-cli
+
+# 2) Esegui il login
+netlify login
+
+# 3) Collega il repo o deploya la cartella frontend
+netlify init
+# scegli: "Create & configure new site"
+# build command: lascia vuoto
+# publish directory: frontend
+```
+
+Poi nel frontend:
+- Apri `frontend/index.html`
+- Attiva il toggle **Groq**
+- Incolla la tua API key gratuita da https://console.groq.com
+- La chat userà direttamente Groq senza backend Python
+
+Budget Tracker:
+- Apri `frontend/budget_tracker.html`
+- Funziona standalone in locale con `localStorage`
+- Puoi importare/esportare il budget come JSON
+
+Deploy automatico da GitHub:
+- Collega il repo `jeaders/Italian-LLM`
+- Configura:
+  - **Base directory**: lascia vuoto
+  - **Build command**: lascia vuoto
+  - **Publish directory**: `frontend`
+- Aggiungi le variabili d'ambiente se servono
+- Deploy!
+
+> Nota: la API key di Groq viene salvata solo nel browser dell’utente via `localStorage` e non è mai esposta nel codice sorgente.
 
 ## 🧪 Test
 
@@ -298,6 +340,7 @@ Italian-LLM/
 ├── requirements.txt            # Dipendenze
 ├── docker-compose.yml          # Orchestrazione servizi
 ├── .env.example                # Configurazione ambiente
+├── netlify.toml                 # Configurazione deploy Netlify
 └── README.md                   # Questo file
 ```
 
@@ -346,6 +389,7 @@ make inference      # Avvia API con uvicorn
 make ui             # Apri chat UI
 make setup-ollama   # Installa Ollama e scarica modello
 make deploy         # Deploy con Docker
+make deploy-netlify # Deploy frontend su Netlify
 make test           # Esegui test pytest
 make clean          # Pulisci cache e file temporanei
 make data           # Scarica dataset
