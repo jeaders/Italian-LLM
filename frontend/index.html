@@ -135,12 +135,10 @@
           <input id="settingsGroqKey" type="password" placeholder="gsk_..." class="input-field w-full rounded-xl px-3 py-2 text-sm text-slate-100 mb-2" />
           <label class="block text-xs text-slate-400 mb-1.5">Modello</label>
           <select id="settingsGroqModel" class="input-field w-full rounded-xl px-3 py-2 text-sm text-slate-100">
-            <option value="llama-3.1-70b-versatile">llama-3.1-70b-versatile</option>
             <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
-            <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
             <option value="gemma2-9b-it">gemma2-9b-it</option>
-            <option value="deepseek-r1-distill-qwen-32b">deepseek-r1-distill-qwen-32b</option>
             <option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>
+            <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
           </select>
         </div>
         <div id="webllmSettings" class="hidden">
@@ -338,6 +336,7 @@
             const errText = await groqRes.text();
             let friendly = 'Groq ' + groqRes.status + ': ' + errText;
             if (groqRes.status === 404) friendly = 'Modello non disponibile: ' + model + '. Prova a cambiare modello dalle impostazioni.';
+            if (groqRes.status === 400 && errText.includes('decommissioned')) friendly = 'Modello deprecato: ' + model + '. Scegli un modello aggiornato dalle impostazioni (es. llama-3.3-70b-versatile, gemma2-9b-it, mixtral-8x7b-32768).';
             throw new Error(friendly);
           }
           const groqData = await groqRes.json();
