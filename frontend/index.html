@@ -4,11 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Italian LLM</title>
+  <meta name="description" content="Assistente AI italiano con provider gratuiti" />
+  <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiSXRhbGljbiBMTE0iLCJzaG9ydF9uYW1lIjoiSXRhbGljbiBMTE0iLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzA3MDkwZiIsInRoZW1lX2NvbG9yIjoiIzMwNzBmNyJ9">
+  <meta name="theme-color" content="#07090f">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module">
-    import * as webllm from "https://esm.run/@mlc-ai/web-llm";
-    window.webllm = webllm;
-  </script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -24,16 +23,12 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-    body { font-family: 'Inter', sans-serif; }
+    * { font-family: 'Inter', sans-serif; }
+    body { background: #07090f; }
 
     .chat-scroll::-webkit-scrollbar { width: 6px; }
     .chat-scroll::-webkit-scrollbar-track { background: transparent; }
     .chat-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 999px; }
-
-    .typing-dot { animation: bounce 1.4s infinite ease-in-out both; }
-    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-    @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
 
     .glass { background: rgba(20,24,36,0.65); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.08); }
     .glass-strong { background: rgba(10,13,22,0.8); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); border: 1px solid rgba(255,255,255,0.12); }
@@ -54,6 +49,24 @@
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     .fade-in { animation: fadeIn 0.35s cubic-bezier(0.22,1,0.36,1) forwards; }
+
+    @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 20px rgba(99,102,241,0.2); } 50% { box-shadow: 0 0 40px rgba(99,102,241,0.4); } }
+    .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+    .typing-dot { animation: bounce 1.4s infinite ease-in-out both; }
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+    .markdown h1 { font-size: 1.5rem; font-weight: 700; margin: 1rem 0 0.5rem; }
+    .markdown h2 { font-size: 1.25rem; font-weight: 600; margin: 0.75rem 0 0.5rem; }
+    .markdown p { margin: 0.5rem 0; line-height: 1.6; }
+    .markdown code { background: rgba(255,255,255,0.05); padding: 0.125rem 0.375rem; border-radius: 0.25rem; font-family: 'JetBrains Mono', monospace; font-size: 0.875em; }
+    .markdown pre { background: rgba(0,0,0,0.3); padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin: 0.5rem 0; }
+    .markdown pre code { background: none; padding: 0; }
+    .markdown ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
+    .markdown ol { list-style: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
+    .markdown blockquote { border-left: 3px solid rgba(99,102,241,0.5); padding-left: 1rem; margin: 0.5rem 0; color: #94a3b8; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 h-screen flex overflow-hidden antialiased">
@@ -61,112 +74,159 @@
   <aside id="sidebar" class="w-72 bg-slate-900/80 border-r border-slate-800 flex flex-col transition-transform duration-200 ease-in-out">
     <div class="p-4 border-b border-slate-800 flex items-center justify-between">
       <div class="flex items-center gap-2">
-        <span class="text-lg">🇮🇹</span>
+        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold text-sm">AI</div>
         <span class="font-semibold text-brand-400">Italian LLM</span>
       </div>
-      <button id="newChat" class="text-xs bg-brand-600 hover:bg-brand-500 text-white px-2.5 py-1.5 rounded-lg transition-colors">Nuova chat</button>
+      <button id="newChat" class="text-xs bg-brand-600 hover:bg-brand-500 text-white px-2.5 py-1.5 rounded-lg transition-all hover:scale-105">+ Nuova</button>
     </div>
 
     <div class="p-3">
-      <input id="searchChats" type="text" placeholder="🔍 Cerca conversazioni..." class="input-field w-full rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500" />
+      <div class="relative">
+        <input id="searchChats" type="text" placeholder="🔍 Cerca conversazioni..." class="input-field w-full rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 pl-9" />
+        <svg class="w-4 h-4 absolute left-2.5 top-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      </div>
     </div>
 
     <div id="history" class="flex-1 overflow-y-auto chat-scroll px-2 space-y-1"></div>
 
     <div class="p-3 border-t border-slate-800 space-y-2">
-      <button id="exportAllBtn" class="w-full text-left px-3 py-2 rounded-lg sidebar-item text-xs text-slate-300">📤 Esporta tutte le chat</button>
-      <button id="importAllBtn" class="w-full text-left px-3 py-2 rounded-lg sidebar-item text-xs text-slate-300">📥 Importa chat</button>
+      <button id="exportAllBtn" class="w-full text-left px-3 py-2 rounded-lg sidebar-item text-xs text-slate-300 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        Esporta tutte le chat
+      </button>
+      <button id="importAllBtn" class="w-full text-left px-3 py-2 rounded-lg sidebar-item text-xs text-slate-300 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        Importa chat
+      </button>
       <input id="importAllInput" type="file" accept="application/json" class="hidden" />
-      <div class="text-[10px] text-slate-500 text-center">Backend: <span id="apiStatus" class="text-slate-300">-</span></div>
+      <div class="flex items-center justify-between text-[10px] text-slate-500 px-3">
+        <span>Backend: <span id="apiStatus" class="text-slate-300">-</span></span>
+        <span id="connectionQuality" class="text-slate-500">●</span>
+      </div>
     </div>
   </aside>
 
   <main class="flex-1 flex flex-col min-w-0 relative">
-    <header class="h-14 border-b border-slate-800 flex items-center px-4 gap-3 bg-slate-900/60">
-      <button id="toggleSidebar" class="md:hidden text-slate-300 hover:text-white text-xl">☰</button>
-      <button id="sidebarToggleDesktop" class="hidden md:block text-slate-400 hover:text-white transition-colors">☰</button>
-      <div class="font-medium text-sm">Chat</div>
+    <header class="h-14 border-b border-slate-800 flex items-center px-4 gap-3 bg-slate-900/60 backdrop-blur-xl">
+      <button id="toggleSidebar" class="md:hidden text-slate-300 hover:text-white text-xl transition-colors">☰</button>
+      <button id="sidebarToggleDesktop" class="hidden md:block text-slate-400 hover:text-white transition-colors p-1.5 rounded-lg hover:bg-slate-800">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="font-medium text-sm flex items-center gap-2">
+        <span id="currentChatTitle">Chat</span>
+      </div>
       <div class="ml-auto flex items-center gap-2">
         <span id="backendLabel" class="hidden md:inline text-xs text-slate-400">Backend: -</span>
         <span id="toolBadge" class="hidden px-2 py-0.5 rounded-lg bg-slate-800 text-slate-200 text-[10px]"></span>
-        <button id="settingsBtn" class="pill text-xs px-2.5 py-1.5 rounded-lg text-slate-300">⚙️</button>
+        <button id="focusModeBtn" class="pill text-xs px-2.5 py-1.5 rounded-lg text-slate-300" title="Focus mode">🎯</button>
+        <button id="settingsBtn" class="pill text-xs px-2.5 py-1.5 rounded-lg text-slate-300" title="Impostazioni">⚙️</button>
       </div>
     </header>
 
-    <div id="chat" class="flex-1 overflow-y-auto chat-scroll">
-      <div id="emptyState" class="h-full flex flex-col items-center justify-center text-slate-400 gap-3 p-6 text-center">
-        <div class="text-5xl">🇮🇹</div>
-        <div class="text-xl font-medium text-slate-200">Italian LLM</div>
-        <div class="text-sm max-w-md">Il tuo assistente AI italiano. Usa <kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-xs">Cmd+K</kbd> per i suggerimenti rapidi.</div>
-        <div class="flex gap-2 mt-2">
-          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300" data-prompt="Spiega la relatività generale in modo semplice">🌌 Relatività</button>
-          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300" data-prompt="Scrivi una mail formale per chiedere un aumento">📧 Mail formale</button>
-          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300" data-prompt="Dammi 3 idee per un viaggio in Sicilia">✈️ Viaggio</button>
+    <div id="chat" class="flex-1 overflow-y-auto chat-scroll relative">
+      <div id="emptyState" class="h-full flex flex-col items-center justify-center text-slate-400 gap-4 p-6 text-center">
+        <div class="relative">
+          <div class="text-6xl mb-4">🇮🇹</div>
+          <div class="absolute -bottom-1 -right-1 w-8 h-8 bg-brand-600 rounded-full flex items-center justify-center text-white text-xs font-bold">AI</div>
+        </div>
+        <div class="text-2xl font-medium text-slate-200">Italian LLM</div>
+        <div class="text-sm max-w-md text-slate-400">Il tuo assistente AI italiano. Usa <kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-xs font-mono">Cmd+K</kbd> per i comandi rapidi.</div>
+        <div class="flex flex-wrap gap-2 mt-2 justify-center">
+          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300 hover:text-white" data-prompt="Spiega la relatività generale in modo semplice">🌌 Relatività</button>
+          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300 hover:text-white" data-prompt="Scrivi una mail formale per chiedere un aumento">📧 Mail formale</button>
+          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300 hover:text-white" data-prompt="Dammi 3 idee per un viaggio in Sicilia">✈️ Viaggio</button>
+          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300 hover:text-white" data-prompt="Come posso sopravvivere con 100 euro al mese?">💰 Budget</button>
         </div>
       </div>
     </div>
 
-    <div class="p-3 border-t border-slate-800 bg-slate-900/60">
+    <div class="p-3 border-t border-slate-800 bg-slate-900/60 backdrop-blur-xl">
       <form id="chatForm" class="flex gap-2">
-        <input id="message" type="text" placeholder="Scrivi un messaggio..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-brand-500" />
-        <button type="submit" id="sendBtn" class="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white px-4 py-2 rounded-xl transition-colors">Invia</button>
+        <div class="flex-1 relative">
+          <input id="message" type="text" placeholder="Scrivi un messaggio..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 pr-20 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-brand-500 transition-all" />
+          <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            <button type="button" id="voiceBtn" class="p-1.5 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800" title="Voice input">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+            </button>
+            <button type="submit" id="sendBtn" class="p-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+            </button>
+          </div>
+        </div>
       </form>
+      <div class="flex items-center justify-between mt-2 text-[10px] text-slate-500">
+        <div class="flex items-center gap-3">
+          <span id="wordCount">0 parole</span>
+          <span id="charCount">0 caratteri</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span id="typingIndicator" class="hidden">● Scrivendo...</span>
+        </div>
+      </div>
     </div>
   </main>
 
   <div id="settingsModal" class="hidden fixed inset-0 z-50 cmd-overlay flex items-center justify-center p-4">
-    <div class="glass-strong rounded-2xl p-6 w-full max-w-md">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold">Impostazioni</h2>
-        <button id="closeSettings" class="text-slate-400 hover:text-white text-xl">×</button>
+    <div class="glass-strong rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-lg font-semibold flex items-center gap-2">⚙️ Impostazioni</h2>
+        <button id="closeSettings" class="text-slate-400 hover:text-white text-xl transition-colors">×</button>
       </div>
-      <div class="space-y-4">
+      <div class="space-y-5">
         <div>
-          <label class="block text-xs text-slate-400 mb-1.5">Provider</label>
-          <select id="providerSelect" class="input-field w-full rounded-xl px-3 py-2 text-sm text-slate-100">
-            <option value="auto">Auto</option>
-            <option value="groq">Groq</option>
-            <option value="webllm">WebLLM (browser, no API key)</option>
-            <option value="backend">Backend locale</option>
+          <label class="block text-xs text-slate-400 mb-2 font-medium">Provider</label>
+          <select id="providerSelect" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100">
+            <option value="auto">🤖 Auto</option>
+            <option value="groq">⚡ Groq</option>
+            <option value="webllm">🌐 WebLLM (browser, no API key)</option>
+            <option value="backend">💻 Backend locale</option>
           </select>
         </div>
         <div id="groqSettings">
-          <label class="block text-xs text-slate-400 mb-1.5">Groq API Key</label>
-          <input id="settingsGroqKey" type="password" placeholder="gsk_..." class="input-field w-full rounded-xl px-3 py-2 text-sm text-slate-100 mb-2" />
-          <label class="block text-xs text-slate-400 mb-1.5">Modello</label>
-          <select id="settingsGroqModel" class="input-field w-full rounded-xl px-3 py-2 text-sm text-slate-100">
+          <label class="block text-xs text-slate-400 mb-2 font-medium">Groq API Key</label>
+          <input id="settingsGroqKey" type="password" placeholder="gsk_..." class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100 mb-3" />
+          <label class="block text-xs text-slate-400 mb-2 font-medium">Modello</label>
+          <select id="settingsGroqModel" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100">
             <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
             <option value="gemma2-9b-it">gemma2-9b-it</option>
             <option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>
             <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
           </select>
+          <div id="groqModelStatus" class="text-[10px] text-slate-500 mt-2">Verifica in corso...</div>
         </div>
         <div id="webllmSettings" class="hidden">
-          <label class="block text-xs text-slate-400 mb-1.5">Modello browser</label>
-          <select id="settingsWebLLMModel" class="input-field w-full rounded-xl px-3 py-2 text-sm text-slate-100">
+          <label class="block text-xs text-slate-400 mb-2 font-medium">Modello browser</label>
+          <select id="settingsWebLLMModel" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100">
             <option value="Llama-3.2-1B-Instruct-q4f32_1-MLC">Llama 3.2 1B (veloce, leggero)</option>
             <option value="Llama-3.2-3B-Instruct-q4f16_1-MLC">Llama 3.2 3B (bilanciato)</option>
             <option value="Phi-3.5-mini-instruct-q4f32_1-MLC">Phi 3.5 Mini (competente, leggero)</option>
             <option value="Qwen2.5-1.5B-Instruct-q4f32_1-MLC">Qwen 2.5 1.5B (multilingua)</option>
             <option value="gemma-2-2b-it-q4f32_1-MLC">Gemma 2 2B (Google, veloce)</option>
           </select>
-          <p class="text-[10px] text-slate-500 mt-2">Il modello viene scaricato e memorizzato nel browser. Nessuna API key richiesta. Richiede WebGPU.</p>
+          <p class="text-[10px] text-slate-500 mt-2">💡 Il modello viene scaricato e memorizzato nel browser. Nessuna API key richiesta. Richiede WebGPU.</p>
         </div>
         <div>
-          <label class="block text-xs text-slate-400 mb-1.5">Temperatura</label>
-          <input id="settingsTemperature" type="range" min="0" max="1.5" step="0.1" value="0.7" class="w-full" />
-          <div class="flex justify-between text-[10px] text-slate-500"><span>0</span><span id="tempValue">0.7</span><span>1.5</span></div>
+          <label class="block text-xs text-slate-400 mb-2 font-medium">Temperatura: <span id="tempValue">0.7</span></label>
+          <input id="settingsTemperature" type="range" min="0" max="1.5" step="0.1" value="0.7" class="w-full accent-brand-500" />
         </div>
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between py-2">
           <span class="text-xs text-slate-300">Web search</span>
-          <input id="settingsWebSearch" type="checkbox" class="accent-brand-500" />
+          <input id="settingsWebSearch" type="checkbox" class="accent-brand-500 w-4 h-4" />
         </div>
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between py-2">
           <span class="text-xs text-slate-300">RAG</span>
-          <input id="settingsRag" type="checkbox" class="accent-brand-500" />
+          <input id="settingsRag" type="checkbox" class="accent-brand-500 w-4 h-4" />
+        </div>
+        <div class="flex items-center justify-between py-2">
+          <span class="text-xs text-slate-300">Markdown rendering</span>
+          <input id="settingsMarkdown" type="checkbox" class="accent-brand-500 w-4 h-4" />
+        </div>
+        <div class="flex items-center justify-between py-2">
+          <span class="text-xs text-slate-300">Suoni</span>
+          <input id="settingsSounds" type="checkbox" class="accent-brand-500 w-4 h-4" />
         </div>
       </div>
-      <button id="saveSettings" class="mt-4 w-full bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium py-2 rounded-xl transition-colors">Salva</button>
+      <button id="saveSettings" class="mt-6 w-full bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium py-2.5 rounded-xl transition-all hover:scale-[1.02]">Salva impostazioni</button>
     </div>
   </div>
 
@@ -177,21 +237,42 @@
     </div>
   </div>
 
+  <div id="focusMode" class="hidden fixed inset-0 z-40 bg-slate-950/95 backdrop-blur-xl">
+    <div class="h-full flex flex-col items-center justify-center p-6">
+      <div id="focusChat" class="w-full max-w-2xl h-[70vh] overflow-y-auto chat-scroll space-y-4"></div>
+      <div class="mt-4 flex gap-2">
+        <button id="exitFocus" class="pill text-xs px-4 py-2 rounded-full text-slate-300">Esci da Focus Mode</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="summaryModal" class="hidden fixed inset-0 z-50 cmd-overlay flex items-center justify-center p-4">
+    <div class="glass-strong rounded-2xl p-6 w-full max-w-lg">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">📝 Riepilogo conversazione</h2>
+        <button id="closeSummary" class="text-slate-400 hover:text-white text-xl">×</button>
+      </div>
+      <div id="summaryContent" class="text-sm text-slate-300 max-h-96 overflow-y-auto chat-scroll"></div>
+      <button id="copySummary" class="mt-4 w-full bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium py-2 rounded-xl transition-colors">Copia riepilogo</button>
+    </div>
+  </div>
+
   <script>
     const API_BASE = (location.protocol === 'https:' ? 'https://' : 'http://') + location.hostname + ':8000';
     const GROQ_KEY = localStorage.getItem('groq_api_key') || '';
     const GROQ_MODEL_KEY = 'groq_model';
-    const GROQ_DEFAULT_MODEL = 'llama-3.1-70b-versatile';
+    const GROQ_DEFAULT_MODEL = 'llama-3.3-70b-versatile';
     let groqModel = localStorage.getItem(GROQ_MODEL_KEY) || GROQ_DEFAULT_MODEL;
     let currentConversationId = 'default';
     let conversations = JSON.parse(localStorage.getItem('llm_conversations') || '{}');
     let settings = JSON.parse(localStorage.getItem('llm_settings') || '{}');
-
-    const defaultSettings = { provider: 'auto', temperature: 0.7, webSearch: false, rag: true };
+    const defaultSettings = { provider: 'auto', temperature: 0.7, webSearch: false, rag: true, markdown: true, sounds: false };
     settings = { ...defaultSettings, ...settings };
 
     let webLLMEngine = null;
     let webLLMReady = false;
+    let recognition = null;
+    let isRecording = false;
 
     const chatEl = document.getElementById('chat');
     const emptyState = document.getElementById('emptyState');
@@ -203,6 +284,20 @@
     const toolBadge = document.getElementById('toolBadge');
     const historyEl = document.getElementById('history');
     const searchInput = document.getElementById('searchChats');
+
+    function playSound(type) {
+      if (!settings.sounds) return;
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      if (type === 'send') { oscillator.frequency.value = 800; gainNode.gain.value = 0.1; }
+      else if (type === 'receive') { oscillator.frequency.value = 600; gainNode.gain.value = 0.08; }
+      else if (type === 'error') { oscillator.frequency.value = 300; gainNode.gain.value = 0.1; }
+      oscillator.start();
+      setTimeout(() => oscillator.stop(), 100);
+    }
 
     function saveConversation(id, history) {
       conversations[id] = { history, updatedAt: Date.now() };
@@ -224,8 +319,8 @@
         const title = convo.history?.[0]?.user || 'Nuova chat';
         if (term && !title.toLowerCase().includes(term)) continue;
         const item = document.createElement('button');
-        item.className = 'w-full text-left px-3 py-2 rounded-lg sidebar-item text-sm text-slate-200 truncate flex items-center justify-between gap-2';
-        item.innerHTML = `<span class="truncate">${escapeHtml(title)}</span><span class="text-[10px] text-slate-500">${new Date(convo.updatedAt || Date.now()).toLocaleDateString('it-IT')}</span>`;
+        item.className = 'w-full text-left px-3 py-2 rounded-lg sidebar-item text-sm text-slate-200 truncate flex items-center justify-between gap-2 group';
+        item.innerHTML = `<span class="truncate flex-1">${escapeHtml(title)}</span><span class="text-[10px] text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity">${new Date(convo.updatedAt || Date.now()).toLocaleDateString('it-IT')}</span>`;
         item.onclick = () => loadConversation(id);
         historyEl.appendChild(item);
       }
@@ -242,6 +337,7 @@
         history.forEach(turn => appendBubble(turn.role, turn.content, turn.meta, false));
       }
       chatEl.scrollTop = chatEl.scrollHeight;
+      updateWordCount();
     }
 
     function appendBubble(role, text, meta = {}, animate = true) {
@@ -249,8 +345,9 @@
       const row = document.createElement('div');
       row.className = `max-w-3xl mx-auto w-full px-4 py-3 ${role === 'user' ? 'flex justify-end' : 'flex justify-start'} ${animate ? 'fade-in' : ''}`;
       const bubble = document.createElement('div');
-      bubble.className = `max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${role === 'user' ? 'bubble-user text-white rounded-br-sm' : 'bubble-assistant text-slate-100 rounded-bl-sm'}`;
-      bubble.textContent = text;
+      const isMarkdown = settings.markdown && role === 'assistant';
+      bubble.className = `max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${role === 'user' ? 'bubble-user text-white rounded-br-sm' : 'bubble-assistant text-slate-100 rounded-bl-sm markdown'}`;
+      bubble.innerHTML = isMarkdown ? renderMarkdown(text) : escapeHtml(text);
       row.appendChild(bubble);
 
       if (meta?.tools_used?.length) {
@@ -267,6 +364,31 @@
       }
       chatEl.appendChild(row);
       chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    function renderMarkdown(text) {
+      if (!text) return '';
+      let html = escapeHtml(text);
+      html = html.replace(/^#{1,6}\s+(.+)$/gim, (match, content) => {
+        const level = match.match(/^#{1,6}/)[0].length;
+        return `<h${level} class="font-bold text-slate-100 mt-3 mb-1">${content}</h${level}>`;
+      });
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-slate-100">$1</strong>');
+      html = html.replace(/\*(.+?)\*/g, '<em class="italic">$1</em>');
+      html = html.replace(/`([^`]+)`/g, '<code class="bg-slate-800/50 px-1 py-0.5 rounded text-brand-300 font-mono text-xs">$1</code>');
+      html = html.replace(/```([\s\S]*?)```/g, '<pre class="bg-slate-900/50 p-3 rounded-lg overflow-x-auto my-2"><code>$1</code></pre>');
+      html = html.replace(/^\s*-\s(.+)$/gim, '<li class="ml-4 list-disc">$1</li>');
+      html = html.replace(/^\s*\d+\.\s(.+)$/gim, '<li class="ml-4 list-decimal">$1</li>');
+      html = html.replace(/\n/g, '<br>');
+      return html;
+    }
+
+    function updateWordCount() {
+      const text = input.value.trim();
+      const words = text ? text.split(/\s+/).length : 0;
+      const chars = text.length;
+      document.getElementById('wordCount').textContent = words + ' parole';
+      document.getElementById('charCount').textContent = chars + ' caratteri';
     }
 
     function typingIndicator() {
@@ -314,9 +436,11 @@
       const message = text || input.value.trim();
       if (!message) return;
       input.value = '';
+      updateWordCount();
       sendBtn.disabled = true;
       appendBubble('user', message);
       typingIndicator();
+      playSound('send');
       const useWebSearch = settings.webSearch;
       const useRag = settings.rag;
       const temperature = settings.temperature || 0.7;
@@ -336,19 +460,21 @@
             const errText = await groqRes.text();
             let friendly = 'Groq ' + groqRes.status + ': ' + errText;
             if (groqRes.status === 404) friendly = 'Modello non disponibile: ' + model + '. Prova a cambiare modello dalle impostazioni.';
-            if (groqRes.status === 400 && errText.includes('decommissioned')) friendly = 'Modello deprecato: ' + model + '. Scegli un modello aggiornato dalle impostazioni (es. llama-3.3-70b-versatile, gemma2-9b-it, mixtral-8x7b-32768).';
+            if (groqRes.status === 400 && errText.includes('decommissioned')) friendly = 'Modello deprecato: ' + model + '. Scegli un modello aggiornato dalle impostazioni.';
             throw new Error(friendly);
           }
           const groqData = await groqRes.json();
           const reply = groqData.choices?.[0]?.message?.content || 'Errore nella risposta Groq';
           removeTypingIndicator();
           appendBubble('assistant', reply);
+          playSound('receive');
           const history = (conversations[currentConversationId]?.history || []).concat([{ role: 'user', content: message }, { role: 'assistant', content: reply }]);
           saveConversation(currentConversationId, history);
         } else if (provider === 'webllm') {
           const reply = await webllmReply(message, temperature);
           removeTypingIndicator();
           appendBubble('assistant', reply);
+          playSound('receive');
           const history = (conversations[currentConversationId]?.history || []).concat([{ role: 'user', content: message }, { role: 'assistant', content: reply }]);
           saveConversation(currentConversationId, history);
         } else {
@@ -360,6 +486,7 @@
           const data = await res.json();
           removeTypingIndicator();
           appendBubble('assistant', data.response || 'Errore', { tools_used: data.tools_used, sources: data.sources });
+          playSound('receive');
           currentConversationId = data.conversation_id;
           const history = (conversations[currentConversationId]?.history || []).concat([{ role: 'user', content: message }, { role: 'assistant', content: data.response, meta: { tools_used: data.tools_used, sources: data.sources } }]);
           saveConversation(currentConversationId, history);
@@ -371,6 +498,7 @@
       } catch (e) {
         removeTypingIndicator();
         appendBubble('assistant', 'Errore: ' + e.message);
+        playSound('error');
       } finally {
         sendBtn.disabled = false;
       }
@@ -412,6 +540,53 @@
       return reply.choices?.[0]?.message?.content || 'Errore nella risposta WebLLM';
     }
 
+    async function validateGroqModels() {
+      const groqKey = document.getElementById('settingsGroqKey').value.trim();
+      const modelSelect = document.getElementById('settingsGroqModel');
+      const statusEl = document.getElementById('groqModelStatus');
+      if (!groqKey || !modelSelect) return;
+      
+      try {
+        statusEl.textContent = 'Verifica in corso...';
+        const res = await fetch('https://api.groq.com/openai/v1/models', {
+          headers: { 'Authorization': 'Bearer ' + groqKey }
+        });
+        if (!res.ok) throw new Error('Impossibile verificare i modelli');
+        const data = await res.json();
+        const validModels = new Set((data.data || []).map(m => m.id));
+        localStorage.setItem('groq_valid_models', JSON.stringify([...validModels]));
+        
+        Array.from(modelSelect.options).forEach(opt => {
+          const isValid = validModels.has(opt.value);
+          opt.disabled = !isValid;
+          const baseText = opt.textContent.replace(/^[✓✗]\s/, '');
+          opt.textContent = (isValid ? '✓ ' : '✗ ') + baseText;
+        });
+        
+        const currentModel = modelSelect.value;
+        if (!validModels.has(currentModel)) {
+          const firstValid = [...validModels][0];
+          if (firstValid) {
+            modelSelect.value = firstValid;
+            groqModel = firstValid;
+            if (statusEl) statusEl.textContent = '⚠️ Modello aggiornato a ' + firstValid;
+          }
+        } else {
+          if (statusEl) statusEl.textContent = '✓ Modelli verificati';
+        }
+      } catch (e) {
+        if (statusEl) statusEl.textContent = '✗ Errore verifica modelli';
+      }
+    }
+
+    function generateSummary() {
+      const history = conversations[currentConversationId]?.history || [];
+      if (!history.length) return 'Nessuna conversazione da riassumere.';
+      const userMessages = history.filter(t => t.role === 'user').map(t => t.content).join(', ');
+      const assistantMessages = history.filter(t => t.role === 'assistant').map(t => t.content).join(', ');
+      return `Conversazione con ${history.filter(t => t.role === 'user').length} messaggi utente e ${history.filter(t => t.role === 'assistant').length} risposte.\n\nArgomenti principali: ${userMessages.slice(0, 200)}...\n\nPunti chiave: ${assistantMessages.slice(0, 300)}...`;
+    }
+
     form.addEventListener('submit', (e) => { e.preventDefault(); sendMessage(); });
     document.getElementById('newChat').addEventListener('click', () => {
       currentConversationId = 'chat-' + Date.now();
@@ -420,6 +595,7 @@
       input.focus();
     });
     searchInput?.addEventListener('input', renderHistory);
+    input?.addEventListener('input', updateWordCount);
 
     document.getElementById('exportAllBtn')?.addEventListener('click', () => {
       const blob = new Blob([JSON.stringify(conversations, null, 2)], { type: 'application/json' });
@@ -429,6 +605,7 @@
       a.download = 'italian-llm-chats.json';
       a.click();
       URL.revokeObjectURL(url);
+      showToast('Chat esportate');
     });
 
     document.getElementById('importAllBtn')?.addEventListener('click', () => document.getElementById('importAllInput')?.click());
@@ -442,6 +619,7 @@
           conversations = { ...conversations, ...parsed };
           localStorage.setItem('llm_conversations', JSON.stringify(conversations));
           renderHistory();
+          showToast('Chat importate');
         } catch (err) { alert('Errore importazione: ' + err.message); }
       };
       reader.readAsText(file);
@@ -461,9 +639,12 @@
       document.getElementById('tempValue').textContent = settings.temperature;
       document.getElementById('settingsWebSearch').checked = settings.webSearch;
       document.getElementById('settingsRag').checked = settings.rag;
+      document.getElementById('settingsMarkdown').checked = settings.markdown;
+      document.getElementById('settingsSounds').checked = settings.sounds;
       document.getElementById('providerSelect').value = settings.provider;
       document.getElementById('settingsWebLLMModel').value = localStorage.getItem('webllm_model') || 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
       toggleProviderSettings(settings.provider);
+      if (settings.provider === 'groq') validateGroqModels();
     }
     function closeSettingsModal() { settingsModal.classList.add('hidden'); }
 
@@ -483,22 +664,28 @@
       const temperature = parseFloat(document.getElementById('settingsTemperature').value);
       const webSearch = document.getElementById('settingsWebSearch').checked;
       const rag = document.getElementById('settingsRag').checked;
+      const markdown = document.getElementById('settingsMarkdown').checked;
+      const sounds = document.getElementById('settingsSounds').checked;
       const provider = document.getElementById('providerSelect').value;
       const webllmModel = document.getElementById('settingsWebLLMModel')?.value || 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
       localStorage.setItem('groq_api_key', groqKey);
       localStorage.setItem(GROQ_MODEL_KEY, model);
       localStorage.setItem('webllm_model', webllmModel);
-      localStorage.setItem('llm_settings', JSON.stringify({ provider, temperature, webSearch, rag }));
-      settings = { provider, temperature, webSearch, rag };
+      localStorage.setItem('llm_settings', JSON.stringify({ provider, temperature, webSearch, rag, markdown, sounds }));
+      settings = { provider, temperature, webSearch, rag, markdown, sounds };
       groqModel = model;
       closeSettingsModal();
       checkHealth();
+      showToast('Impostazioni salvate');
     });
-
-    document.getElementById('providerSelect')?.addEventListener('change', (e) => toggleProviderSettings(e.target.value));
 
     document.getElementById('settingsTemperature')?.addEventListener('input', (e) => {
       document.getElementById('tempValue').textContent = e.target.value;
+    });
+
+    document.getElementById('providerSelect')?.addEventListener('change', (e) => {
+      toggleProviderSettings(e.target.value);
+      if (e.target.value === 'groq') validateGroqModels();
     });
 
     const cmdPalette = document.getElementById('cmdPalette');
@@ -516,16 +703,18 @@
     function renderCmdResults(term) {
       const t = term.toLowerCase();
       const items = [
-        { label: 'Nuova chat', action: () => { closeCmd(); document.getElementById('newChat').click(); } },
-        { label: 'Impostazioni', action: () => { closeCmd(); openSettings(); } },
-        { label: 'Cerca conversazioni', action: () => { closeCmd(); searchInput.focus(); } },
-        { label: 'Esporta chat', action: () => { closeCmd(); document.getElementById('exportAllBtn')?.click(); } },
-        { label: 'Spiega la relatività', action: () => { closeCmd(); sendMessage('Spiega la relatività generale in modo semplice'); } },
-        { label: 'Mail formale', action: () => { closeCmd(); sendMessage('Scrivi una mail formale per chiedere un aumento'); } },
-        { label: 'Idee viaggio Sicilia', action: () => { closeCmd(); sendMessage('Dammi 3 idee per un viaggio in Sicilia di 5 giorni'); } },
+        { label: 'Nuova chat', action: () => { closeCmd(); document.getElementById('newChat').click(); }, icon: '💬' },
+        { label: 'Impostazioni', action: () => { closeCmd(); openSettings(); }, icon: '⚙️' },
+        { label: 'Cerca conversazioni', action: () => { closeCmd(); searchInput.focus(); }, icon: '🔍' },
+        { label: 'Esporta chat', action: () => { closeCmd(); document.getElementById('exportAllBtn')?.click(); }, icon: '📤' },
+        { label: 'Riepilogo conversazione', action: () => { closeCmd(); showSummary(); }, icon: '📝' },
+        { label: 'Spiega la relatività', action: () => { closeCmd(); sendMessage('Spiega la relatività generale in modo semplice'); }, icon: '🌌' },
+        { label: 'Mail formale', action: () => { closeCmd(); sendMessage('Scrivi una mail formale per chiedere un aumento'); }, icon: '📧' },
+        { label: 'Idee viaggio Sicilia', action: () => { closeCmd(); sendMessage('Dammi 3 idee per un viaggio in Sicilia di 5 giorni'); }, icon: '✈️' },
+        { label: 'Focus mode', action: () => { closeCmd(); toggleFocusMode(); }, icon: '🎯' },
       ];
       const filtered = t ? items.filter(i => i.label.toLowerCase().includes(t)) : items;
-      cmdResults.innerHTML = filtered.map(i => `<button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-sm text-slate-200 transition-colors">${escapeHtml(i.label)}</button>`).join('');
+      cmdResults.innerHTML = filtered.map(i => `<button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-sm text-slate-200 transition-colors flex items-center gap-2"><span>${i.icon}</span> ${escapeHtml(i.label)}</button>`).join('');
       cmdResults.querySelectorAll('button').forEach((btn, idx) => {
         btn.addEventListener('click', () => { if (filtered[idx]) filtered[idx].action(); });
       });
@@ -548,6 +737,73 @@
     document.getElementById('sidebarToggleDesktop')?.addEventListener('click', () => {
       document.getElementById('sidebar').classList.toggle('hidden');
     });
+
+    document.getElementById('focusModeBtn')?.addEventListener('click', toggleFocusMode);
+    document.getElementById('exitFocus')?.addEventListener('click', toggleFocusMode);
+
+    function toggleFocusMode() {
+      const focusMode = document.getElementById('focusMode');
+      focusMode.classList.toggle('hidden');
+      if (!focusMode.classList.contains('hidden')) {
+        document.getElementById('focusChat').innerHTML = chatEl.innerHTML;
+      }
+    }
+
+    function showSummary() {
+      const summary = generateSummary();
+      document.getElementById('summaryContent').textContent = summary;
+      document.getElementById('summaryModal').classList.remove('hidden');
+    }
+    document.getElementById('closeSummary')?.addEventListener('click', () => {
+      document.getElementById('summaryModal').classList.add('hidden');
+    });
+    document.getElementById('copySummary')?.addEventListener('click', () => {
+      const text = document.getElementById('summaryContent').textContent;
+      navigator.clipboard.writeText(text);
+      showToast('Riepilogo copiato');
+    });
+
+    const voiceBtn = document.getElementById('voiceBtn');
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'it-IT';
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        input.value = transcript;
+        updateWordCount();
+        voiceBtn.classList.remove('text-red-400');
+        isRecording = false;
+      };
+      recognition.onerror = () => {
+        voiceBtn.classList.remove('text-red-400');
+        isRecording = false;
+      };
+      voiceBtn?.addEventListener('click', () => {
+        if (isRecording) {
+          recognition.stop();
+          voiceBtn.classList.remove('text-red-400');
+          isRecording = false;
+        } else {
+          recognition.start();
+          voiceBtn.classList.add('text-red-400');
+          isRecording = true;
+          showToast('🎤 Ascolto...');
+        }
+      });
+    } else {
+      voiceBtn?.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+
+    function showToast(message, duration = 2200) {
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-6 right-6 glass-strong rounded-2xl px-4 py-3 border border-brand-500/30 z-50 fade-in';
+      toast.innerHTML = `<p class="text-xs text-brand-300 font-medium">${escapeHtml(message)}</p>`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), duration);
+    }
 
     renderHistory();
     renderChat();

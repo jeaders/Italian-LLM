@@ -136,7 +136,8 @@
       <div class="flex gap-2 mb-6">
         <button class="tab-btn active text-xs px-4 py-2 rounded-xl border border-transparent text-slate-300" data-tab="tracker">📊 Tracker</button>
         <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="insights">💡 Insights</button>
-        <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="settings">⚙️ Impostazioni</button>
+        <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="gamification">🏆 Achievement</button>
+        <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="settings">⚙️</button>
       </div>
 
       <div id="tab-tracker" class="tab-content">
@@ -298,6 +299,24 @@
             <button id="clearAllBtn" class="pill text-xs px-3 py-1.5 rounded-full text-alert-500">Cancella tutto</button>
           </div>
           <p class="text-[10px] text-slate-500 mt-3">I dati sono salvati nel browser. Usa esporta/importa per fare backup.</p>
+        </div>
+      </div>
+
+      <div id="tab-gamification" class="tab-content hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="glass rounded-3xl p-6 fade-in">
+            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Salute budget</p>
+            <div id="healthScore" class="text-4xl font-bold text-neon-400 mb-2">-</div>
+            <p id="healthDesc" class="text-xs text-slate-400">-</p>
+          </div>
+          <div class="glass rounded-3xl p-6 fade-in">
+            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Streak</p>
+            <div id="streakInfo" class="text-sm text-slate-200">-</div>
+          </div>
+          <div class="glass rounded-3xl p-6 fade-in md:col-span-2">
+            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Achievement</p>
+            <div id="achievements" class="flex flex-wrap gap-2"></div>
+          </div>
         </div>
       </div>
 
@@ -631,8 +650,78 @@
         document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
         document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
         if (btn.dataset.tab === 'insights') renderInsights();
+        if (btn.dataset.tab === 'gamification') renderGamification();
+        if (btn.dataset.tab === 'gamification') renderGamification();
       });
     });
+
+    function getStreak() {
+      const store = loadStore();
+      const months = Object.keys(store).sort();
+      if (!months.length) return 0;
+      let streak = 0;
+      const now = new Date();
+      for (let i = 0; i < months.length; i++) {
+        const monthKey = now.getFullYear() + '-' + String(now.getMonth() - i + 1).padStart(2, '0');
+        if (store[monthKey]?.expenses?.length > 0) streak++;
+        else break;
+      }
+      return streak;
+    }
+
+    function getHealthScore(spent, remaining, byCategory) {
+      if (remaining < 0) return { score: 20, label: 'Critico', color: 'text-alert-500' };
+      if (remaining < 10) return { score: 40, label: 'Attenzione', color: 'text-orange-400' };
+      if (remaining < 25) return { score: 60, label: 'Moderato', color: 'text-yellow-400' };
+      if (remaining < 50) return { score: 80, label: 'Buono', color: 'text-neon-400' };
+      return { score: 100, label: 'Eccellente', color: 'text-emerald-400' };
+    }
+
+    function getAchievements(spent, remaining, byCategory, streak) {
+      const achievements = [];
+      if (streak >= 1) achievements.push({ icon: '🔥', title: 'Primo mese', desc: 'Hai registrato spese per 1 mese' });
+      if (streak >= 3) achievements.push({ icon: '🔥', title: '3 mesi', desc: 'Streak di 3 mesi' });
+      if (remaining >= 50) achievements.push({ icon: '💎', title: 'Risparmiatore', desc: 'Ti rimangono più di 50€' });
+      if (remaining >= 80) achievements.push({ icon: '🏆', title: 'Campione', desc: 'Ti rimangono più di 80€' });
+      if (byCategory['cibo'] < 30 && spent > 0) achievements.push({ icon: '🥦', title: 'Cibo sano', desc: 'Spendi meno di 30€ in cibo' });
+      if (byCategory['trasporti'] < 10 && spent > 0) achievements.push({ icon: '🚌', title: 'Eco-traveler', desc: 'Spendi meno di 10€ in trasporti' });
+      if (spent === 0) achievements.push({ icon: '✨', title: 'Mese perfetto', desc: 'Nessuna spesa registrata' });
+      if (achievements.length === 0) achievements.push({ icon: '📝', title: 'Inizia', desc: 'Aggiungi spese per sbloccare achievement' });
+      return achievements;
+    }
+
+    function renderGamification() {
+      const data = getMonthData();
+      const spent = data.expenses.reduce((sum, ex) => sum + Number(ex.amount || 0), 0);
+      const remaining = 100 - spent;
+      const byCategory = byCategoryFromExpenses(data.expenses);
+      const streak = getStreak();
+      const health = getHealthScore(spent, remaining, byCategory);
+      const achievements = getAchievements(spent, remaining, byCategory, streak);
+
+      document.getElementById('healthScore').textContent = health.score + '/100';
+      document.getElementById('healthScore').className = 'text-4xl font-bold mb-2 ' + health.color;
+      document.getElementById('healthDesc').textContent = health.label + ' - ' + (remaining >= 0 ? 'Ti rimangono ' + fmt(remaining) : 'Hai superato il budget');
+
+      document.getElementById('streakInfo').innerHTML = `
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-2xl">🔥</span>
+          <span class="text-xl font-bold text-white">${streak}</span>
+          <span class="text-xs text-slate-400">mesi consecutivi</span>
+        </div>
+        <p class="text-xs text-slate-400">Continua così per mantenere la streak!</p>
+      `;
+
+      document.getElementById('achievements').innerHTML = achievements.map(a => `
+        <div class="glass rounded-xl px-3 py-2 flex items-center gap-2">
+          <span class="text-xl">${a.icon}</span>
+          <div>
+            <div class="text-xs font-medium text-slate-200">${a.title}</div>
+            <div class="text-[10px] text-slate-500">${a.desc}</div>
+          </div>
+        </div>
+      `).join('');
+    }
 
     function refreshAll() {
       const status = loadStatus();

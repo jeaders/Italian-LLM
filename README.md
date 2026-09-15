@@ -22,6 +22,14 @@ Creare un LLM italiano accessibile e utile, completamente open source, che possa
 - **Budget Tracker**: frontend dedicato per tracciare spese e ricevere consigli di sopravvivenza con 100 €/mese
 - **Multi-provider**: Groq, WebLLM browser-based, backend locale
 - **UI Moderna**: chat in streaming, cronologia conversazioni, dark mode, sidebar, insights
+- **Voice Input**: riconoscimento vocale per input hands-free
+- **Markdown Rendering**: rendering completo con code highlighting
+- **Focus Mode**: modalità scrittura senza distrazioni
+- **Keyboard Shortcuts**: Cmd+K per comandi rapidi
+- **Conversation Management**: ricerca, esporta/importa JSON, riepiloghi AI
+- **Smart Features**: conta parole/caratteri, suoni, validazione modelli Groq in tempo reale
+- **Budget Gamification**: health score, streak mesi, achievement system
+- **Budget Insights**: proiezione fine mese, media giornaliera, grafici categoria
 - **Deploy Gratuito**: Netlify, HuggingFace Spaces, Fly.io, Vercel, Docker
 
 ## 🏗️ Architettura
