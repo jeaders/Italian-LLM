@@ -7,7 +7,14 @@
   <meta name="description" content="Assistente AI italiano con provider gratuiti" />
   <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiSXRhbGljbiBMTE0iLCJzaG9ydF9uYW1lIjoiSXRhbGljbiBMTE0iLCJzdGFydF91cmwiOiIuIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiIzA3MDkwZiIsInRoZW1lX2NvbG9yIjoiIzMwNzBmNyJ9">
   <meta name="theme-color" content="#07090f">
+  <meta name="version" content="2025-09-15-ec35d75">
   <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
+    window.CreateMLCEngine = CreateMLCEngine;
+    window.webllmModuleReady = true;
+    window.dispatchEvent(new Event("webllm-loaded"));
+  </script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -172,6 +179,16 @@
         <h2 class="text-lg font-semibold flex items-center gap-2">⚙️ Impostazioni</h2>
         <button id="closeSettings" class="text-slate-400 hover:text-white text-xl transition-colors">×</button>
       </div>
+      <div id="updateBanner" class="hidden mb-4 p-3 rounded-xl bg-brand-500/10 border border-brand-500/25">
+        <p class="text-xs text-brand-300 font-medium mb-1">✨ Novità in questa versione</p>
+        <ul class="text-[10px] text-slate-300 list-disc list-inside space-y-0.5">
+          <li>Voice input per messaggi vocali</li>
+          <li>Focus mode per scrrittura senza distrazioni</li>
+          <li>Markdown rendering migliorato</li>
+          <li>WebLLM: modelli nel browser senza API key</li>
+          <li>Gamification nel budget tracker</li>
+        </ul>
+      </div>
       <div class="space-y-5">
         <div>
           <label class="block text-xs text-slate-400 mb-2 font-medium">Provider</label>
@@ -203,7 +220,8 @@
             <option value="Qwen2.5-1.5B-Instruct-q4f32_1-MLC">Qwen 2.5 1.5B (multilingua)</option>
             <option value="gemma-2-2b-it-q4f32_1-MLC">Gemma 2 2B (Google, veloce)</option>
           </select>
-          <p class="text-[10px] text-slate-500 mt-2">💡 Il modello viene scaricato e memorizzato nel browser. Nessuna API key richiesta. Richiede WebGPU.</p>
+          <p id="webgpuWarning" class="text-[10px] text-alert-500 mt-2 hidden">⚠️ WebGPU non supportato su questo browser. Usa Chrome 113+ o Edge 113+.</p>
+          <p class="text-[10px] text-slate-500 mt-2">💡 Il modello viene scaricato e memorizzato nel browser. Nessuna API key richiesta.</p>
         </div>
         <div>
           <label class="block text-xs text-slate-400 mb-2 font-medium">Temperatura: <span id="tempValue">0.7</span></label>
@@ -273,6 +291,16 @@
     let webLLMReady = false;
     let recognition = null;
     let isRecording = false;
+    const webllmLoadPromise = new Promise((resolve) => {
+      if (window.webllmModuleReady) return resolve();
+      window.addEventListener("webllm-loaded", resolve, { once: true });
+    });
+    
+    function checkWebGPUSupport() {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgpu') || canvas.getContext('experimental-webgpu');
+      return !!gl;
+    }
 
     const chatEl = document.getElementById('chat');
     const emptyState = document.getElementById('emptyState');
@@ -511,33 +539,51 @@
     }
 
     async function ensureWebLLM(model) {
+      await webllmLoadPromise;
       if (webLLMReady && webLLMEngine) return webLLMEngine;
-      const webllm = window.webllm;
-      if (!webllm) throw new Error('WebLLM non è disponibile in questa pagina.');
-      webLLMEngine = await webllm.CreateMLCEngine(model, { initProgressCallback: (p) => {
-        const indicator = document.getElementById('typingIndicator');
-        if (indicator) indicator.querySelector('div')?.remove();
-        const row = document.createElement('div');
-        row.id = 'typingIndicator';
-        row.className = 'max-w-3xl mx-auto w-full px-4 py-3 flex justify-start fade-in';
-        row.innerHTML = `<div class="bubble-assistant rounded-2xl rounded-bl-sm px-4 py-3 text-xs text-slate-300">Caricamento modello WebLLM: ${Math.round((p.progress || 0) * 100)}%</div>`;
-        chatEl.appendChild(row);
-        chatEl.scrollTop = chatEl.scrollHeight;
-      }});
-      webLLMReady = true;
-      return webLLMEngine;
+      const CreateMLCEngine = window.CreateMLCEngine;
+      if (!CreateMLCEngine) throw new Error('WebLLM non è disponibile in questa pagina. Riprova più tardi.');
+      try {
+        webLLMEngine = await CreateMLCEngine(model, { initProgressCallback: (p) => {
+          const percent = Math.round((p.progress || 0) * 100);
+          const indicator = document.getElementById('typingIndicator');
+          if (indicator) indicator.remove();
+          const row = document.createElement('div');
+          row.id = 'typingIndicator';
+          row.className = 'max-w-3xl mx-auto w-full px-4 py-3 flex justify-start fade-in';
+          row.innerHTML = `<div class="bubble-assistant rounded-2xl rounded-bl-sm px-4 py-3">
+            <div class="text-xs text-slate-300 mb-1">Caricamento modello WebLLM...</div>
+            <div class="w-full bg-slate-800 rounded-full h-1.5 mt-1">
+              <div class="bg-brand-500 h-1.5 rounded-full transition-all duration-300" style="width:${percent}%"></div>
+            </div>
+            <div class="text-[10px] text-slate-500 mt-1">${percent}% - Il modello verrà scaricato una sola volta</div>
+          </div>`;
+          chatEl.appendChild(row);
+          chatEl.scrollTop = chatEl.scrollHeight;
+        }});
+        webLLMReady = true;
+        return webLLMEngine;
+      } catch (e) {
+        webLLMEngine = null;
+        webLLMReady = false;
+        throw new Error('Impossibile caricare WebLLM. Verifica che il browser supporti WebGPU (Chrome 113+).');
+      }
     }
 
     async function webllmReply(message, temperature) {
       const model = document.getElementById('settingsWebLLMModel')?.value || 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
-      const engine = await ensureWebLLM(model);
-      const reply = await engine.chat.completions.create({
-        messages: [{ role: 'user', content: message }],
-        max_tokens: 512,
-        temperature,
-        stream: false
-      });
-      return reply.choices?.[0]?.message?.content || 'Errore nella risposta WebLLM';
+      try {
+        const engine = await ensureWebLLM(model);
+        const reply = await engine.chat.completions.create({
+          messages: [{ role: 'user', content: message }],
+          max_tokens: 512,
+          temperature,
+          stream: false
+        });
+        return reply.choices?.[0]?.message?.content || 'Errore nella risposta WebLLM';
+      } catch (e) {
+        throw new Error('WebLLM: ' + e.message);
+      }
     }
 
     async function validateGroqModels() {
@@ -645,15 +691,29 @@
       document.getElementById('settingsWebLLMModel').value = localStorage.getItem('webllm_model') || 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
       toggleProviderSettings(settings.provider);
       if (settings.provider === 'groq') validateGroqModels();
+      
+      const currentVersion = document.querySelector('meta[name="version"]')?.content;
+      const savedVersion = localStorage.getItem('app_version');
+      const updateBanner = document.getElementById('updateBanner');
+      if (currentVersion && savedVersion && currentVersion !== savedVersion && updateBanner) {
+        updateBanner.classList.remove('hidden');
+      } else if (updateBanner) {
+        updateBanner.classList.add('hidden');
+      }
+      localStorage.setItem('app_version', currentVersion || '');
     }
     function closeSettingsModal() { settingsModal.classList.add('hidden'); }
 
     function toggleProviderSettings(provider) {
       const groqEl = document.getElementById('groqSettings');
       const webllmEl = document.getElementById('webllmSettings');
+      const webgpuWarning = document.getElementById('webgpuWarning');
       if (!groqEl || !webllmEl) return;
       groqEl.classList.toggle('hidden', provider !== 'groq');
       webllmEl.classList.toggle('hidden', provider !== 'webllm');
+      if (webgpuWarning) {
+        webgpuWarning.classList.toggle('hidden', provider !== 'webllm' || checkWebGPUSupport());
+      }
     }
 
     settingsBtn?.addEventListener('click', openSettings);
@@ -809,6 +869,13 @@
     renderChat();
     checkHealth();
     setInterval(checkHealth, 15000);
+    
+    const currentVersion = document.querySelector('meta[name="version"]')?.content;
+    const savedVersion = localStorage.getItem('app_version');
+    if (currentVersion && savedVersion && currentVersion !== savedVersion) {
+      showToast('🔄 Nuova versione disponibile! Premi Cmd+Shift+R per aggiornare.');
+    }
+    localStorage.setItem('app_version', currentVersion || '');
   </script>
 </body>
 </html>
