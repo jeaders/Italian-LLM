@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Italian LLM</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import * as webllm from "https://esm.run/@mlc-ai/web-llm";
+    window.webllm = webllm;
+  </script>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -122,6 +126,7 @@
           <select id="providerSelect" class="input-field w-full rounded-xl px-3 py-2 text-sm text-slate-100">
             <option value="auto">Auto</option>
             <option value="groq">Groq</option>
+            <option value="webllm">WebLLM (browser, no API key)</option>
             <option value="backend">Backend locale</option>
           </select>
         </div>
@@ -137,6 +142,17 @@
             <option value="deepseek-r1-distill-qwen-32b">deepseek-r1-distill-qwen-32b</option>
             <option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>
           </select>
+        </div>
+        <div id="webllmSettings" class="hidden">
+          <label class="block text-xs text-slate-400 mb-1.5">Modello browser</label>
+          <select id="settingsWebLLMModel" class="input-field w-full rounded-xl px-3 py-2 text-sm text-slate-100">
+            <option value="Llama-3.2-1B-Instruct-q4f32_1-MLC">Llama 3.2 1B (veloce, leggero)</option>
+            <option value="Llama-3.2-3B-Instruct-q4f16_1-MLC">Llama 3.2 3B (bilanciato)</option>
+            <option value="Phi-3.5-mini-instruct-q4f32_1-MLC">Phi 3.5 Mini (competente, leggero)</option>
+            <option value="Qwen2.5-1.5B-Instruct-q4f32_1-MLC">Qwen 2.5 1.5B (multilingua)</option>
+            <option value="gemma-2-2b-it-q4f32_1-MLC">Gemma 2 2B (Google, veloce)</option>
+          </select>
+          <p class="text-[10px] text-slate-500 mt-2">Il modello viene scaricato e memorizzato nel browser. Nessuna API key richiesta. Richiede WebGPU.</p>
         </div>
         <div>
           <label class="block text-xs text-slate-400 mb-1.5">Temperatura</label>
@@ -175,6 +191,9 @@
 
     const defaultSettings = { provider: 'auto', temperature: 0.7, webSearch: false, rag: true };
     settings = { ...defaultSettings, ...settings };
+
+    let webLLMEngine = null;
+    let webLLMReady = false;
 
     const chatEl = document.getElementById('chat');
     const emptyState = document.getElementById('emptyState');
@@ -274,6 +293,12 @@
         apiStatus.className = 'text-brand-400';
         return;
       }
+      if (provider === 'webllm') {
+        apiStatus.textContent = webLLMReady ? 'webllm' : 'loading';
+        backendLabel.textContent = 'Backend: WebLLM' + (webLLMReady ? '' : ' (caricamento...)');
+        apiStatus.className = webLLMReady ? 'text-neon-400' : 'text-amber-400';
+        return;
+      }
       try {
         const res = await fetch(API_BASE + '/health');
         const data = await res.json();
@@ -321,6 +346,12 @@
           appendBubble('assistant', reply);
           const history = (conversations[currentConversationId]?.history || []).concat([{ role: 'user', content: message }, { role: 'assistant', content: reply }]);
           saveConversation(currentConversationId, history);
+        } else if (provider === 'webllm') {
+          const reply = await webllmReply(message, temperature);
+          removeTypingIndicator();
+          appendBubble('assistant', reply);
+          const history = (conversations[currentConversationId]?.history || []).concat([{ role: 'user', content: message }, { role: 'assistant', content: reply }]);
+          saveConversation(currentConversationId, history);
         } else {
           const res = await fetch(API_BASE + '/chat', {
             method: 'POST',
@@ -350,6 +381,36 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
+    }
+
+    async function ensureWebLLM(model) {
+      if (webLLMReady && webLLMEngine) return webLLMEngine;
+      const webllm = window.webllm;
+      if (!webllm) throw new Error('WebLLM non è disponibile in questa pagina.');
+      webLLMEngine = await webllm.CreateMLCEngine(model, { initProgressCallback: (p) => {
+        const indicator = document.getElementById('typingIndicator');
+        if (indicator) indicator.querySelector('div')?.remove();
+        const row = document.createElement('div');
+        row.id = 'typingIndicator';
+        row.className = 'max-w-3xl mx-auto w-full px-4 py-3 flex justify-start fade-in';
+        row.innerHTML = `<div class="bubble-assistant rounded-2xl rounded-bl-sm px-4 py-3 text-xs text-slate-300">Caricamento modello WebLLM: ${Math.round((p.progress || 0) * 100)}%</div>`;
+        chatEl.appendChild(row);
+        chatEl.scrollTop = chatEl.scrollHeight;
+      }});
+      webLLMReady = true;
+      return webLLMEngine;
+    }
+
+    async function webllmReply(message, temperature) {
+      const model = document.getElementById('settingsWebLLMModel')?.value || 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
+      const engine = await ensureWebLLM(model);
+      const reply = await engine.chat.completions.create({
+        messages: [{ role: 'user', content: message }],
+        max_tokens: 512,
+        temperature,
+        stream: false
+      });
+      return reply.choices?.[0]?.message?.content || 'Errore nella risposta WebLLM';
     }
 
     form.addEventListener('submit', (e) => { e.preventDefault(); sendMessage(); });
@@ -402,8 +463,18 @@
       document.getElementById('settingsWebSearch').checked = settings.webSearch;
       document.getElementById('settingsRag').checked = settings.rag;
       document.getElementById('providerSelect').value = settings.provider;
+      document.getElementById('settingsWebLLMModel').value = localStorage.getItem('webllm_model') || 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
+      toggleProviderSettings(settings.provider);
     }
     function closeSettingsModal() { settingsModal.classList.add('hidden'); }
+
+    function toggleProviderSettings(provider) {
+      const groqEl = document.getElementById('groqSettings');
+      const webllmEl = document.getElementById('webllmSettings');
+      if (!groqEl || !webllmEl) return;
+      groqEl.classList.toggle('hidden', provider !== 'groq');
+      webllmEl.classList.toggle('hidden', provider !== 'webllm');
+    }
 
     settingsBtn?.addEventListener('click', openSettings);
     closeSettings?.addEventListener('click', closeSettingsModal);
@@ -414,14 +485,18 @@
       const webSearch = document.getElementById('settingsWebSearch').checked;
       const rag = document.getElementById('settingsRag').checked;
       const provider = document.getElementById('providerSelect').value;
+      const webllmModel = document.getElementById('settingsWebLLMModel')?.value || 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
       localStorage.setItem('groq_api_key', groqKey);
       localStorage.setItem(GROQ_MODEL_KEY, model);
+      localStorage.setItem('webllm_model', webllmModel);
       localStorage.setItem('llm_settings', JSON.stringify({ provider, temperature, webSearch, rag }));
       settings = { provider, temperature, webSearch, rag };
       groqModel = model;
       closeSettingsModal();
       checkHealth();
     });
+
+    document.getElementById('providerSelect')?.addEventListener('change', (e) => toggleProviderSettings(e.target.value));
 
     document.getElementById('settingsTemperature')?.addEventListener('input', (e) => {
       document.getElementById('tempValue').textContent = e.target.value;

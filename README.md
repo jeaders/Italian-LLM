@@ -20,8 +20,9 @@ Creare un LLM italiano accessibile e utile, completamente open source, che possa
 - **RAG**: Retrieval Augmented Generation per risposte accurate e citate
 - **Tool Use**: calcolatrice, web search, Wikipedia, meteo, notizie, conversioni
 - **Budget Tracker**: frontend dedicato per tracciare spese e ricevere consigli di sopravvivenza con 100 €/mese
-- **UI Moderna**: chat in streaming, cronologia conversazioni, dark mode
-- **Deploy Gratuito**: HuggingFace Spaces, Fly.io, Vercel, Docker
+- **Multi-provider**: Groq, WebLLM browser-based, backend locale
+- **UI Moderna**: chat in streaming, cronologia conversazioni, dark mode, sidebar, insights
+- **Deploy Gratuito**: Netlify, HuggingFace Spaces, Fly.io, Vercel, Docker
 
 ## 🏗️ Architettura
 
@@ -39,6 +40,7 @@ Creare un LLM italiano accessibile e utile, completamente open source, che possa
 │  LLM Engine                                 │
 │  - transformers / Ollama backend             │
 │  - LoRA adapter locale                       │
+│  - WebLLM browser inference                  │
 ├──────────────────────────────────────────────┤
 │  RAG Layer (ChromaDB + Embeddings)           │
 ├──────────────────────────────────────────────┤
@@ -250,7 +252,7 @@ flyctl launch
 flyctl deploy
 ```
 
-### Netlify + Groq (frontend statico, provider gratuito)
+### Netlify + frontend statico (provider gratuiti)
 
 ```bash
 # 1) Installa la CLI di Netlify
@@ -266,30 +268,10 @@ netlify init
 # publish directory: frontend
 ```
 
-Poi nel frontend:
-- Apri `frontend/index.html`
-- Attiva il toggle **Groq** o usa il backend locale
-- Se usi Groq, incolla la tua API key gratuita da https://console.groq.com
-- Se il modello restituisce errore **404**, cambialo dalle impostazioni (⚙️)
-- La chat userà direttamente Groq senza backend Python
-
-**Novità UI/UX:**
-- Sidebar con cronologia conversazioni, ricerca e pin
-- Prompt template rapidi
-- Comandi veloci con `Cmd+K` / `Ctrl+K`
-- Esporta/importa tutte le chat in JSON
-- Settings avanzati: provider, modello, temperatura, web search, RAG
-- Streaming e animazioni fluide
-- Mobile responsive
-
-Budget Tracker:
-- Apri `frontend/budget_tracker.html`
-- Funziona standalone in locale con `localStorage`
-- Tabs: Tracker, Insights, Impostazioni
-- Grafico donut e a barre per categoria
-- Proiezione fine mese e media giornaliera
-- Esporta/importa budget JSON
-- Cancella dati e reset mese
+Provider gratuiti nel frontend:
+- **WebLLM**: nessuna API key, modello nel browser via WebGPU. Modelli: Llama 3.2 1B/3B, Phi 3.5 Mini, Qwen 2.5, Gemma 2.
+- **Groq**: API key gratuita da https://console.groq.com, modelli Llama/Mixtral/Gemma/DeepSeek.
+- **Backend locale**: usa l'API Python se in esecuzione.
 
 Deploy automatico da GitHub:
 - Collega il repo `jeaders/Italian-LLM`
@@ -299,8 +281,6 @@ Deploy automatico da GitHub:
   - **Publish directory**: `frontend`
 - Aggiungi le variabili d'ambiente se servono
 - Deploy!
-
-> Nota: la API key di Groq viene salvata solo nel browser dell’utente via `localStorage` e non è mai esposta nel codice sorgente.
 
 ## 🧪 Test
 
