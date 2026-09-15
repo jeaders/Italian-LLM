@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="it">
+<html lang="it" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -18,76 +18,150 @@
     }
   </script>
   <style>
-    .chat-scroll::-webkit-scrollbar { width: 8px; }
-    .chat-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 8px; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    body { font-family: 'Inter', sans-serif; }
+
+    .chat-scroll::-webkit-scrollbar { width: 6px; }
+    .chat-scroll::-webkit-scrollbar-track { background: transparent; }
+    .chat-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 999px; }
+
     .typing-dot { animation: bounce 1.4s infinite ease-in-out both; }
     .typing-dot:nth-child(1) { animation-delay: -0.32s; }
     .typing-dot:nth-child(2) { animation-delay: -0.16s; }
     @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+
+    .glass { background: rgba(20,24,36,0.65); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,0.08); }
+    .glass-strong { background: rgba(10,13,22,0.8); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); border: 1px solid rgba(255,255,255,0.12); }
+
+    .input-field { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); transition: all 0.2s ease; }
+    .input-field:focus { outline: none; border-color: rgba(99,102,241,0.45); box-shadow: 0 0 0 3px rgba(99,102,241,0.08); }
+
+    .pill { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); transition: all 0.15s ease; }
+    .pill:hover { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.35); transform: translateY(-1px); }
+
+    .bubble-user { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+    .bubble-assistant { background: rgba(30,34,48,0.9); border: 1px solid rgba(255,255,255,0.07); }
+
+    .sidebar-item { transition: all 0.15s ease; }
+    .sidebar-item:hover { background: rgba(255,255,255,0.04); }
+
+    .cmd-overlay { background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { animation: fadeIn 0.35s cubic-bezier(0.22,1,0.36,1) forwards; }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 h-screen flex overflow-hidden">
-  <aside id="sidebar" class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col hidden md:flex">
+<body class="bg-slate-950 text-slate-100 h-screen flex overflow-hidden antialiased">
+
+  <aside id="sidebar" class="w-72 bg-slate-900/80 border-r border-slate-800 flex flex-col transition-transform duration-200 ease-in-out">
     <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-      <div class="font-semibold text-brand-400">🇮🇹 Italian LLM</div>
-      <button id="newChat" class="text-xs bg-brand-600 hover:bg-brand-500 text-white px-2 py-1 rounded">Nuova chat</button>
+      <div class="flex items-center gap-2">
+        <span class="text-lg">🇮🇹</span>
+        <span class="font-semibold text-brand-400">Italian LLM</span>
+      </div>
+      <button id="newChat" class="text-xs bg-brand-600 hover:bg-brand-500 text-white px-2.5 py-1.5 rounded-lg transition-colors">Nuova chat</button>
     </div>
-    <div id="history" class="flex-1 overflow-y-auto chat-scroll p-2 space-y-1"></div>
-    <div class="p-3 border-t border-slate-800 text-xs text-slate-400">
-      Backend: <span id="apiStatus" class="text-slate-300">-</span>
+
+    <div class="p-3">
+      <input id="searchChats" type="text" placeholder="🔍 Cerca conversazioni..." class="input-field w-full rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500" />
+    </div>
+
+    <div id="history" class="flex-1 overflow-y-auto chat-scroll px-2 space-y-1"></div>
+
+    <div class="p-3 border-t border-slate-800 space-y-2">
+      <button id="exportAllBtn" class="w-full text-left px-3 py-2 rounded-lg sidebar-item text-xs text-slate-300">📤 Esporta tutte le chat</button>
+      <button id="importAllBtn" class="w-full text-left px-3 py-2 rounded-lg sidebar-item text-xs text-slate-300">📥 Importa chat</button>
+      <input id="importAllInput" type="file" accept="application/json" class="hidden" />
+      <div class="text-[10px] text-slate-500 text-center">Backend: <span id="apiStatus" class="text-slate-300">-</span></div>
     </div>
   </aside>
 
-  <main class="flex-1 flex flex-col min-w-0">
-    <header class="h-14 border-b border-slate-800 flex items-center px-4 gap-3">
-      <button id="toggleSidebar" class="md:hidden text-slate-300 hover:text-white">☰</button>
-      <div class="font-medium">Chat</div>
-      <div class="ml-auto flex items-center gap-2 text-xs text-slate-400">
-        <span id="backendLabel" class="hidden md:inline">Backend: -</span>
-        <span id="toolBadge" class="hidden px-2 py-0.5 rounded bg-slate-800 text-slate-200"></span>
+  <main class="flex-1 flex flex-col min-w-0 relative">
+    <header class="h-14 border-b border-slate-800 flex items-center px-4 gap-3 bg-slate-900/60">
+      <button id="toggleSidebar" class="md:hidden text-slate-300 hover:text-white text-xl">☰</button>
+      <button id="sidebarToggleDesktop" class="hidden md:block text-slate-400 hover:text-white transition-colors">☰</button>
+      <div class="font-medium text-sm">Chat</div>
+      <div class="ml-auto flex items-center gap-2">
+        <span id="backendLabel" class="hidden md:inline text-xs text-slate-400">Backend: -</span>
+        <span id="toolBadge" class="hidden px-2 py-0.5 rounded-lg bg-slate-800 text-slate-200 text-[10px]"></span>
+        <button id="settingsBtn" class="pill text-xs px-2.5 py-1.5 rounded-lg text-slate-300">⚙️</button>
       </div>
     </header>
 
     <div id="chat" class="flex-1 overflow-y-auto chat-scroll">
-      <div id="emptyState" class="h-full flex flex-col items-center justify-center text-slate-400 gap-2 p-6 text-center">
-        <div class="text-4xl">🇮🇹</div>
-        <div class="text-lg font-medium text-slate-200">Italian LLM</div>
-        <div>Chiedi qualsiasi cosa in italiano.</div>
-        <div class="text-xs text-slate-500">Es: "Spiega la relatività generale", "Calcola 128×56", "Che ore sono?"</div>
+      <div id="emptyState" class="h-full flex flex-col items-center justify-center text-slate-400 gap-3 p-6 text-center">
+        <div class="text-5xl">🇮🇹</div>
+        <div class="text-xl font-medium text-slate-200">Italian LLM</div>
+        <div class="text-sm max-w-md">Il tuo assistente AI italiano. Usa <kbd class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-xs">Cmd+K</kbd> per i suggerimenti rapidi.</div>
+        <div class="flex gap-2 mt-2">
+          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300" data-prompt="Spiega la relatività generale in modo semplice">🌌 Relatività</button>
+          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300" data-prompt="Scrivi una mail formale per chiedere un aumento">📧 Mail formale</button>
+          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300" data-prompt="Dammi 3 idee per un viaggio in Sicilia">✈️ Viaggio</button>
+        </div>
       </div>
     </div>
 
     <div class="p-3 border-t border-slate-800 bg-slate-900/60">
-      <div class="flex flex-wrap items-center gap-2 mb-2">
-        <label class="flex items-center gap-2 text-sm text-slate-300">
-          <input id="webSearch" type="checkbox" class="accent-brand-500" /> Ricerca web
-        </label>
-        <label class="flex items-center gap-2 text-sm text-slate-300">
-          <input id="useRag" type="checkbox" class="accent-brand-500" /> RAG
-        </label>
-        <label class="flex items-center gap-2 text-sm text-slate-300">
-          <input id="useGroq" type="checkbox" class="accent-brand-500" /> Groq
-        </label>
-        <input id="groqKey" type="password" placeholder="Groq API key" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-brand-500 w-44" />
-        <select id="groqModel" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-brand-500">
-          <option value="llama-3.1-70b-versatile">llama-3.1-70b-versatile</option>
-          <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
-          <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
-          <option value="gemma2-9b-it">gemma2-9b-it</option>
-          <option value="deepseek-r1-distill-qwen-32b">deepseek-r1-distill-qwen-32b</option>
-          <option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>
-        </select>
-        <label class="flex items-center gap-2 text-sm text-slate-300">
-          Temperatura
-          <input id="temperature" type="number" step="0.1" min="0" max="1.5" value="0.7" class="w-16 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200" />
-        </label>
-      </div>
       <form id="chatForm" class="flex gap-2">
-        <input id="message" type="text" placeholder="Scrivi un messaggio..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-brand-500" />
-        <button type="submit" id="sendBtn" class="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white px-4 py-2 rounded-xl">Invia</button>
+        <input id="message" type="text" placeholder="Scrivi un messaggio..." class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-brand-500" />
+        <button type="submit" id="sendBtn" class="bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white px-4 py-2 rounded-xl transition-colors">Invia</button>
       </form>
     </div>
   </main>
+
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 cmd-overlay flex items-center justify-center p-4">
+    <div class="glass-strong rounded-2xl p-6 w-full max-w-md">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold">Impostazioni</h2>
+        <button id="closeSettings" class="text-slate-400 hover:text-white text-xl">×</button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1.5">Provider</label>
+          <select id="providerSelect" class="input-field w-full rounded-xl px-3 py-2 text-sm text-slate-100">
+            <option value="auto">Auto</option>
+            <option value="groq">Groq</option>
+            <option value="backend">Backend locale</option>
+          </select>
+        </div>
+        <div id="groqSettings">
+          <label class="block text-xs text-slate-400 mb-1.5">Groq API Key</label>
+          <input id="settingsGroqKey" type="password" placeholder="gsk_..." class="input-field w-full rounded-xl px-3 py-2 text-sm text-slate-100 mb-2" />
+          <label class="block text-xs text-slate-400 mb-1.5">Modello</label>
+          <select id="settingsGroqModel" class="input-field w-full rounded-xl px-3 py-2 text-sm text-slate-100">
+            <option value="llama-3.1-70b-versatile">llama-3.1-70b-versatile</option>
+            <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
+            <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
+            <option value="gemma2-9b-it">gemma2-9b-it</option>
+            <option value="deepseek-r1-distill-qwen-32b">deepseek-r1-distill-qwen-32b</option>
+            <option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1.5">Temperatura</label>
+          <input id="settingsTemperature" type="range" min="0" max="1.5" step="0.1" value="0.7" class="w-full" />
+          <div class="flex justify-between text-[10px] text-slate-500"><span>0</span><span id="tempValue">0.7</span><span>1.5</span></div>
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-slate-300">Web search</span>
+          <input id="settingsWebSearch" type="checkbox" class="accent-brand-500" />
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-slate-300">RAG</span>
+          <input id="settingsRag" type="checkbox" class="accent-brand-500" />
+        </div>
+      </div>
+      <button id="saveSettings" class="mt-4 w-full bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium py-2 rounded-xl transition-colors">Salva</button>
+    </div>
+  </div>
+
+  <div id="cmdPalette" class="hidden fixed inset-0 z-50 cmd-overlay flex items-start justify-center pt-24 px-4">
+    <div class="glass-strong rounded-2xl p-2 w-full max-w-lg">
+      <input id="cmdInput" type="text" placeholder="Scrivi un comando o cerca..." class="w-full bg-transparent border-b border-slate-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none" />
+      <div id="cmdResults" class="mt-2 max-h-64 overflow-y-auto chat-scroll"></div>
+    </div>
+  </div>
 
   <script>
     const API_BASE = (location.protocol === 'https:' ? 'https://' : 'http://') + location.hostname + ':8000';
@@ -95,6 +169,13 @@
     const GROQ_MODEL_KEY = 'groq_model';
     const GROQ_DEFAULT_MODEL = 'llama-3.1-70b-versatile';
     let groqModel = localStorage.getItem(GROQ_MODEL_KEY) || GROQ_DEFAULT_MODEL;
+    let currentConversationId = 'default';
+    let conversations = JSON.parse(localStorage.getItem('llm_conversations') || '{}');
+    let settings = JSON.parse(localStorage.getItem('llm_settings') || '{}');
+
+    const defaultSettings = { provider: 'auto', temperature: 0.7, webSearch: false, rag: true };
+    settings = { ...defaultSettings, ...settings };
+
     const chatEl = document.getElementById('chat');
     const emptyState = document.getElementById('emptyState');
     const form = document.getElementById('chatForm');
@@ -104,71 +185,64 @@
     const backendLabel = document.getElementById('backendLabel');
     const toolBadge = document.getElementById('toolBadge');
     const historyEl = document.getElementById('history');
-    const groqKeyInput = document.getElementById('groqKey');
-    const useGroqInput = document.getElementById('useGroq');
-    const groqModelInput = document.getElementById('groqModel');
-
-    if (groqKeyInput && GROQ_KEY) {
-      groqKeyInput.value = GROQ_KEY;
-    }
-    if (useGroqInput && GROQ_KEY) {
-      useGroqInput.checked = true;
-    }
-    if (groqModelInput) {
-      groqModelInput.value = groqModel;
-    }
-
-    if (groqKeyInput) {
-      groqKeyInput.addEventListener('input', () => {
-        localStorage.setItem('groq_api_key', groqKeyInput.value.trim());
-      });
-    }
-    if (groqModelInput) {
-      groqModelInput.addEventListener('change', () => {
-        groqModel = groqModelInput.value || GROQ_DEFAULT_MODEL;
-        localStorage.setItem(GROQ_MODEL_KEY, groqModel);
-      });
-    }
-
-    let conversationId = 'default';
-    let conversations = {};
+    const searchInput = document.getElementById('searchChats');
 
     function saveConversation(id, history) {
-      conversations[id] = history;
+      conversations[id] = { history, updatedAt: Date.now() };
+      localStorage.setItem('llm_conversations', JSON.stringify(conversations));
       renderHistory();
     }
 
+    function loadConversation(id) {
+      currentConversationId = id;
+      renderChat();
+      if (window.innerWidth < 768) document.getElementById('sidebar').classList.add('-translate-x-full');
+    }
+
     function renderHistory() {
+      const term = (searchInput?.value || '').toLowerCase();
       historyEl.innerHTML = '';
-      Object.keys(conversations).forEach(id => {
+      const sorted = Object.entries(conversations).sort((a,b) => (b[1].updatedAt || 0) - (a[1].updatedAt || 0));
+      for (const [id, convo] of sorted) {
+        const title = convo.history?.[0]?.user || 'Nuova chat';
+        if (term && !title.toLowerCase().includes(term)) continue;
         const item = document.createElement('button');
-        item.className = 'w-full text-left px-3 py-2 rounded-lg bg-slate-800/40 hover:bg-slate-800 text-sm text-slate-200 truncate';
-        item.textContent = conversations[id][0]?.user || 'Nuova chat';
+        item.className = 'w-full text-left px-3 py-2 rounded-lg sidebar-item text-sm text-slate-200 truncate flex items-center justify-between gap-2';
+        item.innerHTML = `<span class="truncate">${escapeHtml(title)}</span><span class="text-[10px] text-slate-500">${new Date(convo.updatedAt || Date.now()).toLocaleDateString('it-IT')}</span>`;
         item.onclick = () => loadConversation(id);
         historyEl.appendChild(item);
-      });
+      }
     }
 
-    function loadConversation(id) {
-      conversationId = id;
+    function renderChat() {
+      const history = conversations[currentConversationId]?.history || [];
+      chatEl.innerHTML = '';
+      if (!history.length) {
+        chatEl.appendChild(emptyState);
+        emptyState.style.display = 'flex';
+      } else {
+        emptyState.style.display = 'none';
+        history.forEach(turn => appendBubble(turn.role, turn.content, turn.meta, false));
+      }
+      chatEl.scrollTop = chatEl.scrollHeight;
     }
 
-    function appendBubble(role, text, meta = {}) {
+    function appendBubble(role, text, meta = {}, animate = true) {
       if (emptyState) emptyState.style.display = 'none';
       const row = document.createElement('div');
-      row.className = `max-w-3xl mx-auto w-full px-4 py-3 ${role === 'user' ? 'flex justify-end' : 'flex justify-start'}`;
+      row.className = `max-w-3xl mx-auto w-full px-4 py-3 ${role === 'user' ? 'flex justify-end' : 'flex justify-start'} ${animate ? 'fade-in' : ''}`;
       const bubble = document.createElement('div');
-      bubble.className = `max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${role === 'user' ? 'bg-brand-600 text-white rounded-br-sm' : 'bg-slate-800 text-slate-100 rounded-bl-sm border border-slate-700'}`;
+      bubble.className = `max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${role === 'user' ? 'bubble-user text-white rounded-br-sm' : 'bubble-assistant text-slate-100 rounded-bl-sm'}`;
       bubble.textContent = text;
       row.appendChild(bubble);
 
-      if (meta.tools_used && meta.tools_used.length) {
+      if (meta?.tools_used?.length) {
         const tools = document.createElement('div');
         tools.className = 'mt-1 flex flex-wrap gap-1 ' + (role === 'user' ? 'justify-end' : 'justify-start');
         tools.innerHTML = meta.tools_used.map(t => `<span class="text-[10px] px-2 py-0.5 rounded-full bg-slate-700 text-slate-200">${t}</span>`).join('');
         row.appendChild(tools);
       }
-      if (meta.sources && meta.sources.length) {
+      if (meta?.sources?.length) {
         const sources = document.createElement('div');
         sources.className = 'mt-2 text-xs text-slate-400 ' + (role === 'user' ? 'text-right' : 'text-left');
         sources.textContent = '📚 Fonti: ' + meta.sources.slice(0,3).map(s => s.substring(0, 60)).join(' | ');
@@ -181,8 +255,8 @@
     function typingIndicator() {
       const row = document.createElement('div');
       row.id = 'typingIndicator';
-      row.className = 'max-w-3xl mx-auto w-full px-4 py-3 flex justify-start';
-      row.innerHTML = '<div class="bg-slate-800 border border-slate-700 rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center"><div class="typing-dot w-2 h-2 bg-slate-400 rounded-full"></div><div class="typing-dot w-2 h-2 bg-slate-400 rounded-full"></div><div class="typing-dot w-2 h-2 bg-slate-400 rounded-full"></div></div>';
+      row.className = 'max-w-3xl mx-auto w-full px-4 py-3 flex justify-start fade-in';
+      row.innerHTML = '<div class="bubble-assistant rounded-2xl rounded-bl-sm px-4 py-3 flex gap-1 items-center"><div class="typing-dot w-2 h-2 bg-slate-400 rounded-full"></div><div class="typing-dot w-2 h-2 bg-slate-400 rounded-full"></div><div class="typing-dot w-2 h-2 bg-slate-400 rounded-full"></div></div>';
       chatEl.appendChild(row);
       chatEl.scrollTop = chatEl.scrollHeight;
     }
@@ -193,11 +267,11 @@
     }
 
     async function checkHealth() {
-      const useGroq = document.getElementById('useGroq')?.checked;
-      if (useGroq) {
+      const provider = settings.provider;
+      if (provider === 'groq') {
         apiStatus.textContent = 'groq';
         backendLabel.textContent = 'Backend: Groq';
-        apiStatus.className = 'text-neon-400';
+        apiStatus.className = 'text-brand-400';
         return;
       }
       try {
@@ -220,53 +294,46 @@
       sendBtn.disabled = true;
       appendBubble('user', message);
       typingIndicator();
-      const useWebSearch = document.getElementById('webSearch').checked;
-      const useRag = document.getElementById('useRag').checked;
-      const useGroq = document.getElementById('useGroq').checked;
-      const temperature = parseFloat(document.getElementById('temperature').value) || 0.7;
-      const groqKey = (document.getElementById('groqKey')?.value || '').trim();
+      const useWebSearch = settings.webSearch;
+      const useRag = settings.rag;
+      const temperature = settings.temperature || 0.7;
+      const provider = settings.provider;
+      const groqKey = (document.getElementById('settingsGroqKey')?.value || GROQ_KEY || '').trim();
 
       try {
-        if (useGroq) {
-          if (!groqKey) throw new Error('Inserisci la API key di Groq');
+        if (provider === 'groq' || (provider === 'auto' && groqKey)) {
+          if (!groqKey) throw new Error('Inserisci la API key di Groq nelle impostazioni');
+          const model = document.getElementById('settingsGroqModel')?.value || groqModel;
           const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
             headers: { 'Authorization': 'Bearer ' + groqKey, 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                model: groqModel,
-                messages: [{ role: 'user', content: message }],
-                max_tokens: 512,
-                temperature
-              })
+            body: JSON.stringify({ model, messages: [{ role: 'user', content: message }], max_tokens: 512, temperature })
           });
           if (!groqRes.ok) {
             const errText = await groqRes.text();
             let friendly = 'Groq ' + groqRes.status + ': ' + errText;
-            if (groqRes.status === 404) {
-              friendly = 'Modello non disponibile: ' + groqModel + '. Prova a cambiare modello dal menu a fianco della API key.';
-            }
+            if (groqRes.status === 404) friendly = 'Modello non disponibile: ' + model + '. Prova a cambiare modello dalle impostazioni.';
             throw new Error(friendly);
           }
           const groqData = await groqRes.json();
           const reply = groqData.choices?.[0]?.message?.content || 'Errore nella risposta Groq';
           removeTypingIndicator();
           appendBubble('assistant', reply);
-          conversationId = conversationId || 'default';
-          const history = (conversations[conversationId] || []).concat([{ user: message, assistant: reply }]);
-          saveConversation(conversationId, history.slice(-20));
+          const history = (conversations[currentConversationId]?.history || []).concat([{ role: 'user', content: message }, { role: 'assistant', content: reply }]);
+          saveConversation(currentConversationId, history);
         } else {
           const res = await fetch(API_BASE + '/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, conversation_id: conversationId, use_web_search: useWebSearch, use_rag: useRag, max_tokens: 512, temperature }),
+            body: JSON.stringify({ message, conversation_id: currentConversationId, use_web_search: useWebSearch, use_rag: useRag, max_tokens: 512, temperature }),
           });
           const data = await res.json();
           removeTypingIndicator();
           appendBubble('assistant', data.response || 'Errore', { tools_used: data.tools_used, sources: data.sources });
-          conversationId = data.conversation_id;
-          const history = (conversations[conversationId] || []).concat([{ user: message, assistant: data.response }]);
-          saveConversation(conversationId, history.slice(-20));
-          if (data.tools_used && data.tools_used.length) {
+          currentConversationId = data.conversation_id;
+          const history = (conversations[currentConversationId]?.history || []).concat([{ role: 'user', content: message }, { role: 'assistant', content: data.response, meta: { tools_used: data.tools_used, sources: data.sources } }]);
+          saveConversation(currentConversationId, history);
+          if (data.tools_used?.length) {
             toolBadge.textContent = 'Tool: ' + data.tools_used.join(', ');
             toolBadge.classList.remove('hidden');
           }
@@ -279,8 +346,137 @@
       }
     }
 
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
     form.addEventListener('submit', (e) => { e.preventDefault(); sendMessage(); });
-    document.getElementById('newChat').addEventListener('click', () => { conversationId = 'default'; input.focus(); });
+    document.getElementById('newChat').addEventListener('click', () => {
+      currentConversationId = 'chat-' + Date.now();
+      saveConversation(currentConversationId, []);
+      renderChat();
+      input.focus();
+    });
+    searchInput?.addEventListener('input', renderHistory);
+
+    document.getElementById('exportAllBtn')?.addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(conversations, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'italian-llm-chats.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('importAllBtn')?.addEventListener('click', () => document.getElementById('importAllInput')?.click());
+    document.getElementById('importAllInput')?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          conversations = { ...conversations, ...parsed };
+          localStorage.setItem('llm_conversations', JSON.stringify(conversations));
+          renderHistory();
+        } catch (err) { alert('Errore importazione: ' + err.message); }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const closeSettings = document.getElementById('closeSettings');
+    const saveSettingsBtn = document.getElementById('saveSettings');
+
+    function openSettings() {
+      settingsModal.classList.remove('hidden');
+      document.getElementById('settingsGroqKey').value = localStorage.getItem('groq_api_key') || '';
+      document.getElementById('settingsGroqModel').value = groqModel;
+      document.getElementById('settingsTemperature').value = settings.temperature;
+      document.getElementById('tempValue').textContent = settings.temperature;
+      document.getElementById('settingsWebSearch').checked = settings.webSearch;
+      document.getElementById('settingsRag').checked = settings.rag;
+      document.getElementById('providerSelect').value = settings.provider;
+    }
+    function closeSettingsModal() { settingsModal.classList.add('hidden'); }
+
+    settingsBtn?.addEventListener('click', openSettings);
+    closeSettings?.addEventListener('click', closeSettingsModal);
+    saveSettingsBtn?.addEventListener('click', () => {
+      const groqKey = document.getElementById('settingsGroqKey').value.trim();
+      const model = document.getElementById('settingsGroqModel').value;
+      const temperature = parseFloat(document.getElementById('settingsTemperature').value);
+      const webSearch = document.getElementById('settingsWebSearch').checked;
+      const rag = document.getElementById('settingsRag').checked;
+      const provider = document.getElementById('providerSelect').value;
+      localStorage.setItem('groq_api_key', groqKey);
+      localStorage.setItem(GROQ_MODEL_KEY, model);
+      localStorage.setItem('llm_settings', JSON.stringify({ provider, temperature, webSearch, rag }));
+      settings = { provider, temperature, webSearch, rag };
+      groqModel = model;
+      closeSettingsModal();
+      checkHealth();
+    });
+
+    document.getElementById('settingsTemperature')?.addEventListener('input', (e) => {
+      document.getElementById('tempValue').textContent = e.target.value;
+    });
+
+    const cmdPalette = document.getElementById('cmdPalette');
+    const cmdInput = document.getElementById('cmdInput');
+    const cmdResults = document.getElementById('cmdResults');
+
+    function openCmd() {
+      cmdPalette.classList.remove('hidden');
+      cmdInput.value = '';
+      cmdInput.focus();
+      renderCmdResults('');
+    }
+    function closeCmd() { cmdPalette.classList.add('hidden'); }
+
+    function renderCmdResults(term) {
+      const t = term.toLowerCase();
+      const items = [
+        { label: 'Nuova chat', action: () => { closeCmd(); document.getElementById('newChat').click(); } },
+        { label: 'Impostazioni', action: () => { closeCmd(); openSettings(); } },
+        { label: 'Cerca conversazioni', action: () => { closeCmd(); searchInput.focus(); } },
+        { label: 'Esporta chat', action: () => { closeCmd(); document.getElementById('exportAllBtn')?.click(); } },
+        { label: 'Spiega la relatività', action: () => { closeCmd(); sendMessage('Spiega la relatività generale in modo semplice'); } },
+        { label: 'Mail formale', action: () => { closeCmd(); sendMessage('Scrivi una mail formale per chiedere un aumento'); } },
+        { label: 'Idee viaggio Sicilia', action: () => { closeCmd(); sendMessage('Dammi 3 idee per un viaggio in Sicilia di 5 giorni'); } },
+      ];
+      const filtered = t ? items.filter(i => i.label.toLowerCase().includes(t)) : items;
+      cmdResults.innerHTML = filtered.map(i => `<button class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-800 text-sm text-slate-200 transition-colors">${escapeHtml(i.label)}</button>`).join('');
+      cmdResults.querySelectorAll('button').forEach((btn, idx) => {
+        btn.addEventListener('click', () => { if (filtered[idx]) filtered[idx].action(); });
+      });
+    }
+
+    cmdInput?.addEventListener('input', (e) => renderCmdResults(e.target.value));
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openCmd(); }
+      if (e.key === 'Escape') closeCmd();
+    });
+    cmdPalette?.addEventListener('click', (e) => { if (e.target === cmdPalette) closeCmd(); });
+
+    document.querySelectorAll('.template-btn').forEach(btn => {
+      btn.addEventListener('click', () => sendMessage(btn.dataset.prompt));
+    });
+
+    document.getElementById('toggleSidebar')?.addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('-translate-x-full');
+    });
+    document.getElementById('sidebarToggleDesktop')?.addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('hidden');
+    });
+
+    renderHistory();
+    renderChat();
     checkHealth();
     setInterval(checkHealth, 15000);
   </script>

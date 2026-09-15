@@ -268,15 +268,28 @@ netlify init
 
 Poi nel frontend:
 - Apri `frontend/index.html`
-- Attiva il toggle **Groq**
-- Incolla la tua API key gratuita da https://console.groq.com
-- Se il primo modello restituisce errore **404**, cambialo dal menu a fianco della API key
+- Attiva il toggle **Groq** o usa il backend locale
+- Se usi Groq, incolla la tua API key gratuita da https://console.groq.com
+- Se il modello restituisce errore **404**, cambialo dalle impostazioni (⚙️)
 - La chat userà direttamente Groq senza backend Python
+
+**Novità UI/UX:**
+- Sidebar con cronologia conversazioni, ricerca e pin
+- Prompt template rapidi
+- Comandi veloci con `Cmd+K` / `Ctrl+K`
+- Esporta/importa tutte le chat in JSON
+- Settings avanzati: provider, modello, temperatura, web search, RAG
+- Streaming e animazioni fluide
+- Mobile responsive
 
 Budget Tracker:
 - Apri `frontend/budget_tracker.html`
 - Funziona standalone in locale con `localStorage`
-- Puoi importare/esportare il budget come JSON
+- Tabs: Tracker, Insights, Impostazioni
+- Grafico donut e a barre per categoria
+- Proiezione fine mese e media giornaliera
+- Esporta/importa budget JSON
+- Cancella dati e reset mese
 
 Deploy automatico da GitHub:
 - Collega il repo `jeaders/Italian-LLM`
@@ -310,8 +323,8 @@ Italian-LLM/
 │   ├── main.py                 # Endpoints: chat, budget, health
 │   └── services/               # Tool, RAG, budget tracker
 ├── frontend/                   # UI
-│   ├── index.html              # Chat UI
-│   └── budget_tracker.html     # Budget Tracker
+│   ├── index.html              # Chat UI con sidebar, ricerca, template, Groq
+│   └── budget_tracker.html     # Budget Tracker standalone con insights
 ├── training/                   # Pipeline di training
 │   ├── scripts/
 │   │   ├── train_sft.py        # Training LoRA/QLoRA
