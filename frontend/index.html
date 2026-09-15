@@ -69,6 +69,14 @@
           <input id="useGroq" type="checkbox" class="accent-brand-500" /> Groq
         </label>
         <input id="groqKey" type="password" placeholder="Groq API key" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-brand-500 w-44" />
+        <select id="groqModel" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-brand-500">
+          <option value="llama-3.1-70b-versatile">llama-3.1-70b-versatile</option>
+          <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile</option>
+          <option value="llama-3.1-8b-instant">llama-3.1-8b-instant</option>
+          <option value="gemma2-9b-it">gemma2-9b-it</option>
+          <option value="deepseek-r1-distill-qwen-32b">deepseek-r1-distill-qwen-32b</option>
+          <option value="mixtral-8x7b-32768">mixtral-8x7b-32768</option>
+        </select>
         <label class="flex items-center gap-2 text-sm text-slate-300">
           Temperatura
           <input id="temperature" type="number" step="0.1" min="0" max="1.5" value="0.7" class="w-16 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200" />
@@ -84,7 +92,9 @@
   <script>
     const API_BASE = (location.protocol === 'https:' ? 'https://' : 'http://') + location.hostname + ':8000';
     const GROQ_KEY = localStorage.getItem('groq_api_key') || '';
-    const GROQ_MODEL = 'llama-3.1-8b-instant';
+    const GROQ_MODEL_KEY = 'groq_model';
+    const GROQ_DEFAULT_MODEL = 'llama-3.1-70b-versatile';
+    let groqModel = localStorage.getItem(GROQ_MODEL_KEY) || GROQ_DEFAULT_MODEL;
     const chatEl = document.getElementById('chat');
     const emptyState = document.getElementById('emptyState');
     const form = document.getElementById('chatForm');
@@ -96,6 +106,7 @@
     const historyEl = document.getElementById('history');
     const groqKeyInput = document.getElementById('groqKey');
     const useGroqInput = document.getElementById('useGroq');
+    const groqModelInput = document.getElementById('groqModel');
 
     if (groqKeyInput && GROQ_KEY) {
       groqKeyInput.value = GROQ_KEY;
@@ -103,10 +114,19 @@
     if (useGroqInput && GROQ_KEY) {
       useGroqInput.checked = true;
     }
+    if (groqModelInput) {
+      groqModelInput.value = groqModel;
+    }
 
     if (groqKeyInput) {
       groqKeyInput.addEventListener('input', () => {
         localStorage.setItem('groq_api_key', groqKeyInput.value.trim());
+      });
+    }
+    if (groqModelInput) {
+      groqModelInput.addEventListener('change', () => {
+        groqModel = groqModelInput.value || GROQ_DEFAULT_MODEL;
+        localStorage.setItem(GROQ_MODEL_KEY, groqModel);
       });
     }
 
@@ -212,16 +232,20 @@
           const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
             headers: { 'Authorization': 'Bearer ' + groqKey, 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              model: GROQ_MODEL,
-              messages: [{ role: 'user', content: message }],
-              max_tokens: 512,
-              temperature
-            })
+              body: JSON.stringify({
+                model: groqModel,
+                messages: [{ role: 'user', content: message }],
+                max_tokens: 512,
+                temperature
+              })
           });
           if (!groqRes.ok) {
-            const err = await groqRes.text();
-            throw new Error('Groq ' + groqRes.status + ': ' + err);
+            const errText = await groqRes.text();
+            let friendly = 'Groq ' + groqRes.status + ': ' + errText;
+            if (groqRes.status === 404) {
+              friendly = 'Modello non disponibile: ' + groqModel + '. Prova a cambiare modello dal menu a fianco della API key.';
+            }
+            throw new Error(friendly);
           }
           const groqData = await groqRes.json();
           const reply = groqData.choices?.[0]?.message?.content || 'Errore nella risposta Groq';

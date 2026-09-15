@@ -270,6 +270,7 @@ Poi nel frontend:
 - Apri `frontend/index.html`
 - Attiva il toggle **Groq**
 - Incolla la tua API key gratuita da https://console.groq.com
+- Se il primo modello restituisce errore **404**, cambialo dal menu a fianco della API key
 - La chat userà direttamente Groq senza backend Python
 
 Budget Tracker:
