@@ -714,7 +714,7 @@
     }
 
     form.addEventListener('submit', (e) => { e.preventDefault(); sendMessage(); });
-    document.getElementById('newChat').addEventListener('click', () => {
+    document.getElementById('newChat')?.addEventListener('click', () => {
       currentConversationId = 'chat-' + Date.now();
       saveConversation(currentConversationId, []);
       renderChat();
