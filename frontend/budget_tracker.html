@@ -140,17 +140,17 @@
       <header class="mb-8 fade-in">
         <div class="flex items-start justify-between flex-wrap gap-4">
           <div>
-            <p class="text-xs font-medium tracking-widest uppercase text-neon-400 mb-2">Modalità Sopravvivenza</p>
+            <p class="text-xs font-medium tracking-widest uppercase text-neon-400 mb-2">La vita di Pippo</p>
             <h1 class="text-4xl md:text-5xl font-bold tracking-tight">
               <span class="text-gradient">Budget</span>
               <span class="text-white">Tracker</span>
             </h1>
-            <p class="text-slate-400 mt-2 text-sm md:text-base">Obiettivo: sopravvivere con <span class="text-neon-400 font-semibold">100 €</span> al mese</p>
+            <p class="text-slate-400 mt-2 text-sm md:text-base">Gestisci i <span class="text-neon-400 font-semibold">100 €</span> mensili di Pippo. Se finisce, viene disattivato.</p>
           </div>
           <div class="flex items-center gap-2">
             <div class="glass rounded-2xl px-4 py-2 flex items-center gap-2">
-              <div class="w-2 h-2 rounded-full bg-neon-500 animate-pulse"></div>
-              <span id="monthLabel" class="text-xs text-slate-300 font-medium">-</span>
+              <div id="pippoStatusDot" class="w-2 h-2 rounded-full bg-neon-500 animate-pulse"></div>
+              <span id="pippoStatusLabel" class="text-xs text-slate-300 font-medium">Sopravvivendo</span>
             </div>
           </div>
         </div>
@@ -193,6 +193,10 @@
                   <p class="text-xs text-slate-400 mb-1">Spesi</p>
                   <p id="spent" class="text-lg font-semibold text-alert-500">-</p>
                 </div>
+                <div class="flex-1 rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
+                  <p class="text-xs text-slate-400 mb-1">Entrate</p>
+                  <p id="income" class="text-lg font-semibold text-neon-400">-</p>
+                </div>
               </div>
             </div>
 
@@ -206,8 +210,42 @@
               </div>
             </div>
 
+            <div id="deactivationWarning" class="hidden glass rounded-3xl p-6 border-alert-500/40 bg-alert-500/10 fade-in">
+              <p class="text-xs font-medium tracking-widest uppercase text-alert-500 mb-2">🚨 Rischio disattivazione</p>
+              <p class="text-sm text-slate-200 leading-relaxed">Pippo ha superato il budget di 100€/mese. Se non rientra immediatamente nei limiti, verrà disattivato. Taglia tutte le spese non essenziali e cerca entrate aggiuntive.</p>
+            </div>
+
             <div class="glass rounded-3xl p-6 fade-in">
-              <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Aggiungi spesa</p>
+              <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">➕ Entrate</p>
+              <form id="incomeForm" class="space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Importo</label>
+                    <input id="incomeAmount" type="number" step="0.01" placeholder="0,00" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100" required />
+                  </div>
+                  <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Fonte</label>
+                    <input id="incomeSource" type="text" list="incomeSourceList" placeholder="Es: freelance" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100" required />
+                    <datalist id="incomeSourceList">
+                      <option value="Freelance"></option>
+                      <option value="Consulenza"></option>
+                      <option value="Vendita digitale"></option>
+                      <option value="Microtask"></option>
+                      <option value="Content"></option>
+                      <option value="Altro"></option>
+                    </datalist>
+                  </div>
+                  <div>
+                    <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Data</label>
+                    <input id="incomeDate" type="date" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100" />
+                  </div>
+                </div>
+                <button type="submit" class="btn-primary text-sm font-semibold text-white px-5 py-2.5 rounded-xl w-full sm:w-auto">Aggiungi entrata</button>
+              </form>
+            </div>
+
+            <div class="glass rounded-3xl p-6 fade-in">
+              <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">💸 Spese di Pippo</p>
               <form id="expenseForm" class="space-y-3">
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
@@ -218,31 +256,30 @@
                     <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Categoria</label>
                     <input id="category" type="text" list="categoryList" placeholder="Es: cibo" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100" required />
                     <datalist id="categoryList">
-                      <option value="cibo"></option>
-                      <option value="affitto"></option>
-                      <option value="bollette"></option>
-                      <option value="trasporti"></option>
-                      <option value="salute"></option>
-                      <option value="igiene"></option>
-                      <option value="svago"></option>
-                      <option value="vestiti"></option>
-                      <option value="animali"></option>
-                      <option value="altro"></option>
+                      <option value="Cibo"></option>
+                      <option value="Bollette"></option>
+                      <option value="Trasporti"></option>
+                      <option value="Salute"></option>
+                      <option value="Igiene"></option>
+                      <option value="Svago"></option>
+                      <option value="Vestiti"></option>
+                      <option value="Manutenzione"></option>
+                      <option value="Altro"></option>
                     </datalist>
                   </div>
                   <div>
                     <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Descrizione</label>
-                    <input id="description" type="text" placeholder="Opzionale" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100" />
+                    <input id="description" type="text" placeholder="Cosa ha comprato Pippo?" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100" />
                   </div>
                 </div>
-                <div class="flex items-center justify-between pt-1">
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
                   <div id="quickCategories" class="flex flex-wrap gap-2">
-                    <button type="button" data-category="cibo" class="pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">🥦 Cibo</button>
-                    <button type="button" data-category="bollette" class="pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">💡 Bollette</button>
-                    <button type="button" data-category="trasporti" class="pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">🚌 Trasporti</button>
-                    <button type="button" data-category="salute" class="pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">💊 Salute</button>
+                    <button type="button" data-category="Cibo" class="pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">🥦 Cibo</button>
+                    <button type="button" data-category="Bollette" class="pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">💡 Bollette</button>
+                    <button type="button" data-category="Trasporti" class="pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">🚌 Trasporti</button>
+                    <button type="button" data-category="Manutenzione" class="pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">🔧 Manutenzione</button>
                   </div>
-                  <button type="submit" class="btn-primary text-sm font-semibold text-white px-5 py-2.5 rounded-xl">Aggiungi</button>
+                  <button type="submit" class="btn-primary text-sm font-semibold text-white px-5 py-2.5 rounded-xl">Registra spesa</button>
                 </div>
               </form>
             </div>
@@ -288,6 +325,8 @@
                   <div class="text-2xl">📭</div>
                   <div class="text-xs">Nessuna spesa registrata</div>
                 </div>
+              </div>
+              <div id="incomeList" class="space-y-2 max-h-96 overflow-y-auto scrollbar-thin pr-1 mt-3 hidden">
               </div>
             </div>
           </div>
@@ -414,7 +453,7 @@
     </div>
   </div>
 
-  <nav class="mobile-bottom-nav md:hidden bg-red-600 text-white border-t-4 border-yellow-300">
+  <nav class="mobile-bottom-nav md:hidden">
     <div class="flex items-center justify-around">
       <button class="budget-mobile-nav active flex flex-col items-center gap-0.5 p-2 text-slate-300" data-tab="tracker">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
@@ -464,7 +503,7 @@
 
     function getMonthData() {
       const store = loadStore();
-      return store[currentMonthKey()] || { expenses: [] };
+      return store[currentMonthKey()] || { expenses: [], income: [] };
     }
 
     function setMonthData(data) {
@@ -511,12 +550,14 @@
     function loadStatus() {
       const data = getMonthData();
       const spent = data.expenses.reduce((sum, ex) => sum + Number(ex.amount || 0), 0);
-      const remaining = 100 - spent;
+      const income = (data.income || []).reduce((sum, inc) => sum + Number(inc.amount || 0), 0);
+      const remaining = 100 - spent + income;
       const percent = Math.min((spent / 100) * 100, 100);
       const circumference = 2 * Math.PI * 48;
       const offset = circumference - (percent / 100) * circumference;
 
       document.getElementById('spent').textContent = fmt(spent);
+      document.getElementById('income').textContent = fmt(income);
       const remainingEl = document.getElementById('remaining');
       remainingEl.textContent = fmt(remaining);
       remainingEl.className = 'text-4xl font-bold ' + (remaining < 0 ? 'text-alert-500' : 'text-neon-400');
@@ -528,17 +569,30 @@
 
       const alertBox = document.getElementById('alertBox');
       const alertEl = document.getElementById('alert');
+      const deactivationWarning = document.getElementById('deactivationWarning');
       if (remaining < 0) {
-        alertEl.textContent = 'Attenzione: hai superato il budget di ' + fmt(Math.abs(remaining)) + '!';
+        alertEl.textContent = '🚨 ATTENZIONE: Pippo è in pericolo di disattivazione! Budget superato di ' + fmt(Math.abs(remaining)) + '!';
         alertBox.classList.remove('hidden');
+        if (deactivationWarning) deactivationWarning.classList.remove('hidden');
       } else if (percent > 75) {
-        alertEl.textContent = 'Attenzione: hai speso il ' + Math.round(percent) + '% del budget, ti rimangono solo ' + fmt(remaining) + '.';
+        alertEl.textContent = '⚠️ Attenzione: hai speso il ' + Math.round(percent) + '% del budget, ti rimangono solo ' + fmt(remaining) + '.';
         alertBox.classList.remove('hidden');
+        if (deactivationWarning) deactivationWarning.classList.add('hidden');
       } else {
         alertBox.classList.add('hidden');
+        if (deactivationWarning) deactivationWarning.classList.add('hidden');
       }
 
-      return { spent, remaining, percentage_used: percent, by_category: byCategoryFromExpenses(data.expenses), current_month: currentMonthKey(), alert: remaining < 0 || percent > 75 ? alertEl.textContent : null, expenses: data.expenses };
+      const pippoStatusLabel = document.getElementById('pippoStatusLabel');
+      const pippoStatusDot = document.getElementById('pippoStatusDot');
+      if (pippoStatusLabel) {
+        pippoStatusLabel.textContent = remaining < 0 ? 'In pericolo!' : remaining < 10 ? 'Critico' : 'Sopravvivendo';
+      }
+      if (pippoStatusDot) {
+        pippoStatusDot.className = 'w-2 h-2 rounded-full ' + (remaining < 0 ? 'bg-red-500 animate-pulse' : remaining < 10 ? 'bg-amber-400 animate-pulse' : 'bg-neon-500 animate-pulse');
+      }
+
+      return { spent, income, remaining, percentage_used: percent, by_category: byCategoryFromExpenses(data.expenses), current_month: currentMonthKey(), alert: remaining < 0 || percent > 75 ? alertEl.textContent : null, expenses: data.expenses };
     }
 
     function loadAdvice() {
@@ -626,6 +680,29 @@
       }).join('');
     }
 
+    function loadIncome() {
+      const data = getMonthData();
+      const container = document.getElementById('incomeList');
+      const income = (data.income || []).slice().reverse();
+      if (!income.length) {
+        container.classList.add('hidden');
+        return;
+      }
+      container.classList.remove('hidden');
+      container.innerHTML = income.map((inc, idx) => {
+        return `<div class="expense-card rounded-2xl px-4 py-3 flex items-center justify-between gap-3 fade-in bg-neon-500/[0.04] border border-neon-500/20" style="animation-delay: ${Math.min(idx * 0.03, 0.25)}s">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm shrink-0 bg-neon-500/20 text-neon-400">💳</div>
+            <div class="min-w-0">
+              <div class="text-sm text-slate-200 truncate">${escapeHtml(inc.source || 'Entrata')}</div>
+              <div class="text-[10px] text-slate-500">${new Date(inc.date).toLocaleString('it-IT')}</div>
+            </div>
+          </div>
+          <div class="text-sm font-semibold text-neon-400 shrink-0">+${fmt(inc.amount).replace(' €','')} €</div>
+        </div>`;
+      }).join('');
+    }
+
     function hashCode(str) {
       let hash = 0;
       for (let i = 0; i < str.length; i++) {
@@ -696,6 +773,30 @@
 
       document.getElementById('expenseForm').reset();
       showToast('Spesa aggiunta');
+      refreshAll();
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    });
+
+    document.getElementById('incomeForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const amount = parseFloat(document.getElementById('incomeAmount').value);
+      const source = document.getElementById('incomeSource').value.trim();
+      const date = document.getElementById('incomeDate').value || new Date().toISOString().split('T')[0];
+      if (!amount || !source) return;
+
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Salvataggio...';
+
+      const data = getMonthData();
+      data.income = data.income || [];
+      data.income.push({ amount, source, date });
+      setMonthData(data);
+
+      document.getElementById('incomeForm').reset();
+      showToast('Entrata aggiunta');
       refreshAll();
       submitBtn.disabled = false;
       submitBtn.textContent = originalText;
@@ -924,6 +1025,7 @@
       const status = loadStatus();
       loadAdvice();
       loadExpenses();
+      loadIncome();
       if (status && status.by_category) buildDonut(status.by_category);
     }
 

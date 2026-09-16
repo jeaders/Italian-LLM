@@ -20,7 +20,9 @@ def load_budget() -> Dict[str, Any]:
         "monthly_budget": 100.0,
         "current_month": datetime.now().strftime("%Y-%m"),
         "expenses": [],
-        "savings_tips": []
+        "income": [],
+        "savings_tips": [],
+        "deactivated": False
     }
 
 
@@ -54,15 +56,34 @@ def add_expense(amount: float, category: str, description: str = "") -> Dict[str
     return expense
 
 
+def add_income(amount: float, source: str, date: str = "") -> Dict[str, Any]:
+    budget = get_current_month_budget()
+    entry = {
+        "amount": round(amount, 2),
+        "source": source,
+        "date": date or datetime.now().isoformat(),
+        "timestamp": datetime.now().timestamp()
+    }
+    budget.setdefault("income", []).append(entry)
+    save_budget(budget)
+    return entry
+
+
 def get_spent() -> float:
     budget = get_current_month_budget()
     return round(sum(e["amount"] for e in budget["expenses"]), 2)
 
 
+def get_income() -> float:
+    budget = get_current_month_budget()
+    return round(sum(e["amount"] for e in budget.get("income", [])), 2)
+
+
 def get_remaining() -> float:
     budget = get_current_month_budget()
     spent = get_spent()
-    return round(budget["monthly_budget"] - spent, 2)
+    income = get_income()
+    return round(budget["monthly_budget"] - spent + income, 2)
 
 
 def get_expenses_by_category() -> Dict[str, float]:
@@ -73,25 +94,41 @@ def get_expenses_by_category() -> Dict[str, float]:
     return dict(by_cat)
 
 
+def get_income_by_source() -> Dict[str, float]:
+    budget = get_current_month_budget()
+    by_src = defaultdict(float)
+    for e in budget.get("income", []):
+        by_src[e["source"]] = round(by_src[e["source"]] + e["amount"], 2)
+    return dict(by_src)
+
+
 def get_status() -> Dict[str, Any]:
     budget = get_current_month_budget()
     spent = get_spent()
+    income = get_income()
     remaining = get_remaining()
     by_cat = get_expenses_by_category()
+    by_src = get_income_by_source()
     percentage = round((spent / budget["monthly_budget"]) * 100, 1) if budget["monthly_budget"] > 0 else 0.0
     alert = None
+    deactivation_risk = False
     if remaining < 0:
         alert = f"Attenzione: hai superato il budget di {abs(remaining):.2f} euro!"
+        deactivation_risk = True
     elif percentage > 75:
         alert = f"Attenzione: hai speso il {percentage}% del budget, ti rimangono solo {remaining:.2f} euro."
     return {
         "monthly_budget": budget["monthly_budget"],
         "spent": spent,
+        "income": income,
         "remaining": remaining,
         "percentage_used": percentage,
         "by_category": by_cat,
+        "by_income_source": by_src,
         "alert": alert,
-        "expenses_count": len(budget["expenses"])
+        "deactivation_risk": deactivation_risk,
+        "expenses_count": len(budget["expenses"]),
+        "income_count": len(budget.get("income", []))
     }
 
 

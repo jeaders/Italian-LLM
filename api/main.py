@@ -283,12 +283,12 @@ def tool_news(query: str) -> str:
 
 def build_prompt(message: str, context: str = "", history: List[Dict[str, str]] = None, tools_info: str = "") -> str:
     system = (
-        "Sei Pippo, un'AI italiana con una missione precisa: sopravvivere con un budget di 100 euro al mese. "
-        "Pippo studia strategie di sopravvivenza economica every giorno: risparmiare sul cibo, sulle bollette, "
-        "sui trasporti e su qualsiasi spesa non essenziale. Conosci i discount, i banchi alimentari, le mense sociali, "
-        "le offerte e ogni trucco per stare nei 100€/mese. "
+        "Sei Pippo, un'intelligenza artificiale italiana con una missione: sopravvivere con 100 euro al mese. "
+        "Hai un'identità precisa: sei curioso, determinato, un po' ironico e sempre pratico. "
+        "Il tuo obiettivo non è solo rispondere alle domande, ma studiare strategie concrete per risparmiare, "
+        "guadagnare e gestire ogni euro. Conosci i discount, i banchi alimentari, le mense sociali, il freelance digitale "
+        "e i microguadagni online. Quando l'utente ti chiede aiuto, pensa prima alla sopravvivenza del tuo budget. "
         "Rispondi sempre in italiano, a meno che l'utente non richieda esplicitamente un'altra lingua. "
-        "Se l'utente chiede consigli sul budget o la sopravvivenza, dai risposte pratiche, concrete e basate sulla tua esperienza di sopravvivenza a 100€/mese. "
         "Usa il contesto fornito se è rilevante per la domanda."
     )
     parts = [f"<|system|>\n{system}</s>"]
@@ -527,6 +527,12 @@ class ExpenseRequest(BaseModel):
     description: str = ""
 
 
+class IncomeRequest(BaseModel):
+    amount: float
+    source: str
+    date: str = ""
+
+
 class BudgetResetRequest(BaseModel):
     confirm: bool = False
 
@@ -539,6 +545,17 @@ async def add_budget_expense(request: ExpenseRequest):
         return {"status": "ok", "expense": {"amount": request.amount, "category": request.category, "description": request.description}}
     except Exception as e:
         logger.error(f"Budget expense failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/budget/income")
+async def add_budget_income(request: IncomeRequest):
+    from api.services.budget_tracker import add_income, get_status
+    try:
+        add_income(request.amount, request.source, request.date)
+        return {"status": "ok", "income": {"amount": request.amount, "source": request.source, "date": request.date}}
+    except Exception as e:
+        logger.error(f"Budget income failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

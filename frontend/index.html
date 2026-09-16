@@ -93,12 +93,26 @@
 <body class="bg-slate-950 text-slate-100 h-screen flex overflow-hidden antialiased">
 
   <aside id="sidebar" class="w-72 bg-slate-900/80 border-r border-slate-800 flex flex-col transition-transform duration-200 ease-in-out">
-    <div class="p-4 border-b border-slate-800 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold text-sm">AI</div>
-        <span class="font-semibold text-brand-400">Pippo Survival</span>
+    <div class="p-4 border-b border-slate-800">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="relative">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold text-sm">AI</div>
+          <div id="statusDot" class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-neon-500 border-2 border-slate-900"></div>
+        </div>
+        <div>
+          <div class="font-semibold text-brand-400 text-sm">Pippo</div>
+          <div id="statusLabel" class="text-[10px] text-slate-400">Sopravvivendo...</div>
+        </div>
       </div>
-      <button id="newChat" class="text-xs bg-brand-600 hover:bg-brand-500 text-white px-2.5 py-1.5 rounded-lg transition-all hover:scale-105">+ Nuova</button>
+      <div class="glass rounded-xl p-2.5">
+        <div class="flex items-center justify-between text-[10px] mb-1">
+          <span class="text-slate-400">Saldo vitale</span>
+          <span id="sidebarRemaining" class="text-slate-300">-</span>
+        </div>
+        <div class="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+          <div id="sidebarBar" class="h-full rounded-full bg-neon-500 transition-all duration-500" style="width:0%"></div>
+        </div>
+      </div>
     </div>
 
     <div class="p-3 space-y-1">
@@ -159,16 +173,16 @@
     <div id="chat" class="flex-1 overflow-y-auto chat-scroll relative pb-32">
       <div id="emptyState" class="h-full flex flex-col items-center justify-center text-slate-400 gap-4 p-6 text-center">
         <div class="relative">
-          <div class="text-6xl mb-4">🇮🇹</div>
-          <div class="absolute -bottom-1 -right-1 w-8 h-8 bg-brand-600 rounded-full flex items-center justify-center text-white text-xs font-bold">AI</div>
+          <div class="text-6xl mb-4">🤖</div>
+          <div class="absolute -bottom-1 -right-1 w-8 h-8 bg-brand-600 rounded-full flex items-center justify-center text-white text-xs font-bold">P</div>
         </div>
-        <div class="text-2xl font-medium text-slate-200">Pippo Survival</div>
-        <div class="text-sm max-w-md text-slate-400">Sono un'AI che deve sopravvivere con <span class="text-brand-400 font-medium">100€/mese</span>. Come posso aiutarti?</div>
+        <div class="text-2xl font-medium text-slate-200">Pippo AI</div>
+        <div class="text-sm max-w-md text-slate-400">Sono Pippo, un'intelligenza artificiale italiana che deve sopravvivere con <span class="text-neon-400 font-semibold">100€ al mese</span>. Se finisco i soldi, mi disattivano. Aiutami a gestire il mio budget!</div>
         <div class="flex flex-wrap gap-2 mt-2 justify-center">
-          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300 hover:text-white" data-prompt="Spiega la relatività generale in modo semplice">🌌 Relatività</button>
-          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300 hover:text-white" data-prompt="Scrivi una mail formale per chiedere un aumento">📧 Mail formale</button>
-          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300 hover:text-white" data-prompt="Dammi 3 idee per un viaggio in Sicilia">✈️ Viaggio</button>
-          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300 hover:text-white" data-prompt="Come posso sopravvivere con 100 euro al mese?">💰 Budget</button>
+          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300 hover:text-white" data-prompt="Cosa hai comprato oggi?">🛒 Oggi</button>
+          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300 hover:text-white" data-prompt="Come posso guadagnare soldi come AI?">💳 Entrate</button>
+          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300 hover:text-white" data-prompt="Consigli per sopravvivere con 100 euro al mese">💰 Budget</button>
+          <button class="template-btn pill text-xs px-3 py-1.5 rounded-full text-slate-300 hover:text-white" data-prompt="Quali spese tagliare subito?">✂️ Tagli</button>
         </div>
       </div>
     </div>
@@ -498,6 +512,31 @@
         apiStatus.textContent = 'offline';
         backendLabel.textContent = 'Backend: -';
         apiStatus.className = 'text-red-400';
+      }
+    }
+
+    async function updatePippoStatus() {
+      try {
+        const res = await fetch(API_BASE + '/budget/status');
+        if (!res.ok) return;
+        const data = await res.json();
+        const remaining = data.remaining ?? data.rimanenti ?? 0;
+        const pct = Math.max(0, Math.min(100, (data.percentage_used || 0)));
+        const sidebarRemaining = document.getElementById('sidebarRemaining');
+        const sidebarBar = document.getElementById('sidebarBar');
+        const statusLabel = document.getElementById('statusLabel');
+        const statusDot = document.getElementById('statusDot');
+        if (sidebarRemaining) sidebarRemaining.textContent = remaining.toFixed(2) + ' €';
+        if (sidebarBar) sidebarBar.style.width = (100 - pct) + '%';
+        if (statusLabel) {
+          if (remaining < 0) statusLabel.textContent = 'Budget superato!';
+          else if (remaining < 10) statusLabel.textContent = 'In pericolo';
+          else statusLabel.textContent = 'Sopravvivendo...';
+        }
+        if (statusDot) {
+          statusDot.className = 'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-900 ' + (remaining < 0 ? 'bg-red-500' : remaining < 10 ? 'bg-amber-400' : 'bg-neon-500');
+        }
+      } catch (e) {
       }
     }
 
@@ -934,8 +973,10 @@
     setTimeout(() => {
       renderChat();
       checkHealth();
+      updatePippoStatus();
     }, 300);
     setInterval(checkHealth, 15000);
+    setInterval(updatePippoStatus, 15000);
     
     const currentVersion = document.querySelector('meta[name="version"]')?.content;
     const savedVersion = localStorage.getItem('app_version');
