@@ -30,6 +30,8 @@ Creare un LLM italiano accessibile e utile, completamente open source, che possa
 - **Smart Features**: conta parole/caratteri, suoni, validazione modelli Groq in tempo reale
 - **Budget Gamification**: health score, streak mesi, achievement system
 - **Budget Insights**: proiezione fine mese, media giornaliera, grafici categoria
+- **Mobile First**: navigazione bottom, touch-friendly, safe areas, PWA
+- **Offline Ready**: service worker, caching, funziona senza connessione
 - **Deploy Gratuito**: Netlify, HuggingFace Spaces, Fly.io, Vercel, Docker
 
 ## 🏗️ Architettura

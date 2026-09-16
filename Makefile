@@ -4,7 +4,8 @@ help:
 	@echo "Italian LLM - Available commands:"
 	@echo "  make install        - Install dependencies"
 	@echo "  make train         - Start training"
-	@echo "  make train-pippo   - Train Pippo on survival dataset (100€ budget)"
+	@echo "  make train-pippo   - Train Pippo on survival dataset (100€ budget)
+  make survival-data - Expand survival training dataset"
 	@echo "  make inference     - Start inference server"
 	@echo "  make ui            - Open local UI"
 	@echo "  make setup-ollama  - Install and pull Ollama model"
@@ -21,6 +22,9 @@ train:
 
 train-pippo:
 	@bash setup_training.sh
+
+survival-data:
+	python scripts/expand_survival_data.py
 
 inference:
 	uvicorn api.main:app --reload --port 8000

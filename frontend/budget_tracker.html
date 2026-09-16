@@ -99,9 +99,26 @@
 
     .fade-in { animation: fadeIn 0.35s cubic-bezier(0.22,1,0.36,1) forwards; }
 
-    .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
     .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
     .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 999px; }
+
+    .mobile-bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(7, 9, 15, 0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom));
+      z-index: 50;
+    }
+
+    @media (min-width: 768px) {
+      .mobile-bottom-nav { display: none; }
+    }
   </style>
 </head>
 <body class="text-slate-100 min-h-screen antialiased bg-[#07090f]">
@@ -320,11 +337,32 @@
         </div>
       </div>
 
-      <footer class="mt-10 text-center">
+      <footer class="mt-10 text-center pb-24 md:pb-10">
         <p class="text-[10px] text-slate-600 tracking-wide">Budget Tracker — Standalone · Sopravvivere con 100€ al mese</p>
       </footer>
     </div>
   </div>
+
+  <nav class="mobile-bottom-nav md:hidden">
+    <div class="flex items-center justify-around">
+      <button class="budget-mobile-nav active flex flex-col items-center gap-0.5 p-2 text-slate-300" data-tab="tracker">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <span class="text-[10px]">Tracker</span>
+      </button>
+      <button class="budget-mobile-nav flex flex-col items-center gap-0.5 p-2 text-slate-400" data-tab="insights">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+        <span class="text-[10px]">Insights</span>
+      </button>
+      <button class="budget-mobile-nav flex flex-col items-center gap-0.5 p-2 text-slate-400" data-tab="gamification">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+        <span class="text-[10px]">Premi</span>
+      </button>
+      <button class="budget-mobile-nav flex flex-col items-center gap-0.5 p-2 text-slate-400" data-tab="settings">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span class="text-[10px]">Impostazioni</span>
+      </button>
+    </div>
+  </nav>
 
   <div id="toast" class="hidden fixed bottom-6 right-6 glass-strong rounded-2xl px-4 py-3 border border-neon-500/30">
     <p id="toastText" class="text-xs text-neon-300 font-medium"></p>
@@ -651,8 +689,20 @@
         document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
         if (btn.dataset.tab === 'insights') renderInsights();
         if (btn.dataset.tab === 'gamification') renderGamification();
+      });
+    });
+
+    document.querySelectorAll('.budget-mobile-nav').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.budget-mobile-nav').forEach(b => { b.classList.remove('active', 'text-slate-300'); b.classList.add('text-slate-400'); });
+        btn.classList.add('active', 'text-slate-300');
+        btn.classList.remove('text-slate-400');
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
+        if (btn.dataset.tab === 'insights') renderInsights();
         if (btn.dataset.tab === 'gamification') renderGamification();
       });
+    });
     });
 
     function getStreak() {
@@ -729,6 +779,23 @@
       loadExpenses();
       if (status && status.by_category) buildDonut(status.by_category);
     }
+
+    function showSkeleton() {
+      const container = document.getElementById('expenses');
+      if (container) container.innerHTML = '<div class="space-y-2"><div class="skeleton h-16 w-full"></div><div class="skeleton h-16 w-full"></div><div class="skeleton h-16 w-3/4"></div></div>';
+    }
+
+    document.querySelectorAll('.budget-mobile-nav').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.budget-mobile-nav').forEach(b => { b.classList.remove('active', 'text-slate-300'); b.classList.add('text-slate-400'); });
+        btn.classList.add('active', 'text-slate-300');
+        btn.classList.remove('text-slate-400');
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+        document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
+        if (btn.dataset.tab === 'insights') renderInsights();
+        if (btn.dataset.tab === 'gamification') renderGamification();
+      });
+    });
 
     refreshAll();
   </script>
