@@ -84,12 +84,15 @@
 
     @media (max-width: 768px) {
       .bubble-user, .bubble-assistant { max-width: 94%; }
+      body { padding-bottom: env(safe-area-inset-bottom); }
     }
+
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 h-screen flex overflow-hidden antialiased">
 
-  <aside id="sidebar" class="w-72 bg-slate-900/80 border-r border-slate-800 flex flexcol transition-transform duration-200 ease-in-out">
+  <aside id="sidebar" class="w-72 bg-slate-900/80 border-r border-slate-800 flex flex-col transition-transform duration-200 ease-in-out">
     <div class="p-4 border-b border-slate-800 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-bold text-sm">AI</div>
@@ -134,14 +137,14 @@
         <span id="currentChatTitle">Chat</span>
       </div>
       <div class="ml-auto flex items-center gap-2">
-        <span id="backendLabel" class="hidden md:inline text-xs text-slate-400">Backend: -</span>
+         <span id="backendLabel" class="hidden md:inline text-xs text-slate-400">Sistema: -</span>
         <span id="toolBadge" class="hidden px-2 py-0.5 rounded-lg bg-slate-800 text-slate-200 text-[10px]"></span>
-        <button id="focusModeBtn" class="pill text-xs px-2.5 py-1.5 rounded-lg text-slate-300" title="Focus mode">🎯</button>
+         <button id="focusModeBtn" class="pill text-xs px-2.5 py-1.5 rounded-lg text-slate-300" title="Modalità focus">🎯</button>
         <button id="settingsBtn" class="pill text-xs px-2.5 py-1.5 rounded-lg text-slate-300" title="Impostazioni">⚙️</button>
       </div>
     </header>
 
-    <div id="chat" class="flex-1 overflow-y-auto chat-scroll relative">
+    <div id="chat" class="flex-1 overflow-y-auto chat-scroll relative pb-32">
       <div id="emptyState" class="h-full flex flex-col items-center justify-center text-slate-400 gap-4 p-6 text-center">
         <div class="relative">
           <div class="text-6xl mb-4">🇮🇹</div>
@@ -158,12 +161,12 @@
       </div>
     </div>
 
-    <div class="p-3 border-t border-slate-800 bg-slate-900/60 backdrop-blur-xl">
+    <div class="p-3 border-t border-slate-800 bg-slate-900/60 backdrop-blur-xl md:pb-3">
       <form id="chatForm" class="flex gap-2">
         <div class="flex-1 relative">
           <input id="message" type="text" placeholder="Scrivi un messaggio..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 pr-20 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-brand-500 transition-all" />
           <div class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            <button type="button" id="voiceBtn" class="p-1.5 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800" title="Voice input">
+             <button type="button" id="voiceBtn" class="p-1.5 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-slate-800" title="Input vocale">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
             </button>
             <button type="submit" id="sendBtn" class="p-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-lg transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100">
@@ -204,14 +207,14 @@
         <div>
           <label class="block text-xs text-slate-400 mb-2 font-medium">Provider</label>
           <select id="providerSelect" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100">
-            <option value="auto">🤖 Auto</option>
+            <option value="auto">🤖 Automatico</option>
             <option value="groq">⚡ Groq</option>
-            <option value="webllm">🌐 WebLLM (browser, no API key)</option>
-            <option value="backend">💻 Backend locale</option>
+            <option value="webllm">🌐 WebLLM (browser, nessuna chiave)</option>
+            <option value="backend">💻 Sistema locale</option>
           </select>
         </div>
         <div id="groqSettings">
-          <label class="block text-xs text-slate-400 mb-2 font-medium">Groq API Key</label>
+          <label class="block text-xs text-slate-400 mb-2 font-medium">Chiave API Groq</label>
           <input id="settingsGroqKey" type="password" placeholder="gsk_..." class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100 mb-3" />
           <label class="block text-xs text-slate-400 mb-2 font-medium">Modello</label>
           <select id="settingsGroqModel" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100">
@@ -247,7 +250,7 @@
           <input id="settingsRag" type="checkbox" class="accent-brand-500 w-4 h-4" />
         </div>
         <div class="flex items-center justify-between py-2">
-          <span class="text-xs text-slate-300">Markdown rendering</span>
+          <span class="text-xs text-slate-300">Rendering Markdown</span>
           <input id="settingsMarkdown" type="checkbox" class="accent-brand-500 w-4 h-4" />
         </div>
         <div class="flex items-center justify-between py-2">
@@ -275,7 +278,7 @@
     </div>
   </div>
 
-  <nav id="mobileNav" class="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-xl border-t border-slate-800 px-4 py-2 flex items-center justify-around z-30 pb-safe">
+  <nav id="mobileNav" class="md:hidden fixed bottom-0 left-0 right-0 bg-red-600 text-white border-t-4 border-yellow-300 px-4 py-4 flex items-center justify-around z-[999]">
     <button class="mobile-nav-btn active flex flex-col items-center gap-0.5 p-2 text-slate-300" data-page="chat">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
       <span class="text-[10px]">Chat</span>

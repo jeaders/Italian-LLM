@@ -92,6 +92,10 @@
       color: #00e68a;
     }
 
+    @media (max-width: 767px) {
+      .tab-btn { display: none; }
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
@@ -119,9 +123,11 @@
     @media (min-width: 768px) {
       .mobile-bottom-nav { display: none; }
     }
+
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
   </style>
 </head>
-<body class="text-slate-100 min-h-screen antialiased bg-[#07090f]">
+<body class="text-slate-100 min-h-screen antialiased bg-[#07090f] pb-safe">
   <div class="relative overflow-hidden">
     <div class="pointer-events-none absolute inset-0">
       <div class="absolute top-24 left-10 text-3xl opacity-20">🥦</div>
@@ -130,11 +136,11 @@
       <div class="absolute bottom-32 right-24 text-3xl opacity-20">🛒</div>
     </div>
 
-    <div class="relative max-w-6xl mx-auto px-4 py-8">
+    <div class="relative max-w-6xl mx-auto px-4 py-8 pb-32">
       <header class="mb-8 fade-in">
         <div class="flex items-start justify-between flex-wrap gap-4">
           <div>
-            <p class="text-xs font-medium tracking-widest uppercase text-neon-400 mb-2">Survival Mode</p>
+            <p class="text-xs font-medium tracking-widest uppercase text-neon-400 mb-2">Modalità Sopravvivenza</p>
             <h1 class="text-4xl md:text-5xl font-bold tracking-tight">
               <span class="text-gradient">Budget</span>
               <span class="text-white">Tracker</span>
@@ -151,10 +157,10 @@
       </header>
 
       <div class="flex gap-2 mb-6">
-        <button class="tab-btn active text-xs px-4 py-2 rounded-xl border border-transparent text-slate-300" data-tab="tracker">📊 Tracker</button>
-        <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="insights">💡 Insights</button>
-        <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="gamification">🏆 Achievement</button>
-        <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="settings">⚙️</button>
+         <button class="tab-btn active text-xs px-4 py-2 rounded-xl border border-transparent text-slate-300" data-tab="tracker">📊 Tracciamento</button>
+         <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="insights">💡 Analisi</button>
+         <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="gamification">🏆 Traguardi</button>
+         <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="settings">⚙️ Impostazioni</button>
       </div>
 
       <div id="tab-tracker" class="tab-content">
@@ -343,19 +349,19 @@
     </div>
   </div>
 
-  <nav class="mobile-bottom-nav md:hidden">
+  <nav class="mobile-bottom-nav md:hidden bg-red-600 text-white border-t-4 border-yellow-300">
     <div class="flex items-center justify-around">
       <button class="budget-mobile-nav active flex flex-col items-center gap-0.5 p-2 text-slate-300" data-tab="tracker">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-        <span class="text-[10px]">Tracker</span>
+        <span class="text-[10px]">Tracciamento</span>
       </button>
       <button class="budget-mobile-nav flex flex-col items-center gap-0.5 p-2 text-slate-400" data-tab="insights">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-        <span class="text-[10px]">Insights</span>
+        <span class="text-[10px]">Analisi</span>
       </button>
       <button class="budget-mobile-nav flex flex-col items-center gap-0.5 p-2 text-slate-400" data-tab="gamification">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
-        <span class="text-[10px]">Premi</span>
+        <span class="text-[10px]">Traguardi</span>
       </button>
       <button class="budget-mobile-nav flex flex-col items-center gap-0.5 p-2 text-slate-400" data-tab="settings">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -703,7 +709,6 @@
         if (btn.dataset.tab === 'gamification') renderGamification();
       });
     });
-    });
 
     function getStreak() {
       const store = loadStore();
@@ -784,18 +789,6 @@
       const container = document.getElementById('expenses');
       if (container) container.innerHTML = '<div class="space-y-2"><div class="skeleton h-16 w-full"></div><div class="skeleton h-16 w-full"></div><div class="skeleton h-16 w-3/4"></div></div>';
     }
-
-    document.querySelectorAll('.budget-mobile-nav').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.budget-mobile-nav').forEach(b => { b.classList.remove('active', 'text-slate-300'); b.classList.add('text-slate-400'); });
-        btn.classList.add('active', 'text-slate-300');
-        btn.classList.remove('text-slate-400');
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-        document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
-        if (btn.dataset.tab === 'insights') renderInsights();
-        if (btn.dataset.tab === 'gamification') renderGamification();
-      });
-    });
 
     refreshAll();
   </script>
