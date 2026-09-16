@@ -101,6 +101,18 @@
       <button id="newChat" class="text-xs bg-brand-600 hover:bg-brand-500 text-white px-2.5 py-1.5 rounded-lg transition-all hover:scale-105">+ Nuova</button>
     </div>
 
+    <div class="p-3 space-y-1">
+      <button class="sidebar-item w-full text-left px-3 py-2 rounded-lg text-xs text-slate-300 flex items-center gap-2" data-page="chat">
+        <span>💬</span> Chat
+      </button>
+      <button class="sidebar-item w-full text-left px-3 py-2 rounded-lg text-xs text-slate-300 flex items-center gap-2" data-page="budget">
+        <span>💰</span> Budget
+      </button>
+      <button class="sidebar-item w-full text-left px-3 py-2 rounded-lg text-xs text-slate-300 flex items-center gap-2" data-page="settings">
+        <span>⚙️</span> Impostazioni
+      </button>
+    </div>
+
     <div class="p-3">
       <div class="relative">
         <input id="searchChats" type="text" placeholder="🔍 Cerca conversazioni..." class="input-field w-full rounded-xl px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 pl-9" />
@@ -818,6 +830,14 @@
 
     document.querySelectorAll('.template-btn').forEach(btn => {
       btn.addEventListener('click', () => sendMessage(btn.dataset.prompt));
+    });
+
+    document.querySelectorAll('.sidebar-item[data-page]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const page = btn.dataset.page;
+        if (page === 'budget') window.open('budget_tracker.html', '_blank');
+        if (page === 'settings') openSettings();
+      });
     });
 
     document.getElementById('toggleSidebar')?.addEventListener('click', () => {

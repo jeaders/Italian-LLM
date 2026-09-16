@@ -156,14 +156,15 @@
         </div>
       </header>
 
-      <div class="flex gap-2 mb-6">
+       <div class="flex gap-2 mb-6">
          <button class="tab-btn active text-xs px-4 py-2 rounded-xl border border-transparent text-slate-300" data-tab="tracker">📊 Tracciamento</button>
+         <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="survival">🛡️ Sopravvivenza</button>
          <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="insights">💡 Analisi</button>
          <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="gamification">🏆 Traguardi</button>
          <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="settings">⚙️ Impostazioni</button>
-      </div>
+       </div>
 
-      <div id="tab-tracker" class="tab-content">
+       <div id="tab-tracker" class="tab-content">
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div class="lg:col-span-5 space-y-6">
             <div class="glass rounded-3xl p-6 fade-in">
@@ -343,6 +344,70 @@
         </div>
       </div>
 
+      <div id="tab-survival" class="tab-content hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="glass rounded-3xl p-6 fade-in md:col-span-2">
+            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-2">Obiettivi di sopravvivenza · 100€/mese</p>
+            <div id="survivalGoals" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div class="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
+                <p class="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Budget giornaliero</p>
+                <p id="dailyBudget" class="text-xl font-bold text-neon-400">-</p>
+                <p class="text-[10px] text-slate-500 mt-1">per cibo e spese vive</p>
+              </div>
+              <div class="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
+                <p class="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Cibo (max 35€)</p>
+                <p id="foodGoal" class="text-xl font-bold text-white">-</p>
+                <p class="text-[10px] text-slate-500 mt-1">~<span id="dailyFoodBudget">0,00</span> € al giorno</p>
+              </div>
+              <div class="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
+                <p class="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Trasporti (max 15€)</p>
+                <p id="transportGoal" class="text-xl font-bold text-white">-</p>
+                <p class="text-[10px] text-slate-500 mt-1">bici, mezzi pubblici, piedi</p>
+              </div>
+              <div class="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
+                <p class="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Rimanenti</p>
+                <p id="remainingGoal" class="text-xl font-bold text-neon-400">-</p>
+                <p class="text-[10px] text-slate-500 mt-1">su 100€ totali</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass rounded-3xl p-6 fade-in">
+            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Consiglio Pippo AI</p>
+            <div class="rounded-2xl bg-neon-500/[0.07] border border-neon-500/20 p-4">
+              <p id="survivalTip" class="text-sm text-slate-200 leading-relaxed">Caricamento...</p>
+            </div>
+          </div>
+
+          <div class="glass rounded-3xl p-6 fade-in">
+            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Azioni di sopravvivenza</p>
+            <ul id="survivalActions" class="space-y-2 text-xs text-slate-300"></ul>
+          </div>
+
+          <div class="glass rounded-3xl p-6 fade-in md:col-span-2">
+            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Checklist rapida</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <label class="flex items-center gap-2 rounded-xl bg-white/[0.02] border border-white/[0.06] px-3 py-2.5 cursor-pointer hover:border-neon-500/30 transition-all">
+                <input type="checkbox" class="survival-check accent-neon-500" data-task="pasto" />
+                <span class="text-xs text-slate-300">🥦 Pasto cucinato in casa oggi</span>
+              </label>
+              <label class="flex items-center gap-2 rounded-xl bg-white/[0.02] border border-white/[0.06] px-3 py-2.5 cursor-pointer hover:border-neon-500/30 transition-all">
+                <input type="checkbox" class="survival-check accent-neon-500" data-task="discount" />
+                <span class="text-xs text-slate-300">🛒 Spesa al discount</span>
+              </label>
+              <label class="flex items-center gap-2 rounded-xl bg-white/[0.02] border border-white/[0.06] px-3 py-2.5 cursor-pointer hover:border-neon-500/30 transition-all">
+                <input type="checkbox" class="survival-check accent-neon-500" data-task="nospend" />
+                <span class="text-xs text-slate-300">🚫 Niente spese non essenziali</span>
+              </label>
+              <label class="flex items-center gap-2 rounded-xl bg-white/[0.02] border border-white/[0.06] px-3 py-2.5 cursor-pointer hover:border-neon-500/30 transition-all">
+                <input type="checkbox" class="survival-check accent-neon-500" data-task="bici" />
+                <span class="text-xs text-slate-300">🚌 Spostamenti a piedi/bici</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <footer class="mt-10 text-center pb-24 md:pb-10">
         <p class="text-[10px] text-slate-600 tracking-wide">Budget Tracker — Standalone · Sopravvivere con 100€ al mese</p>
       </footer>
@@ -354,6 +419,10 @@
       <button class="budget-mobile-nav active flex flex-col items-center gap-0.5 p-2 text-slate-300" data-tab="tracker">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         <span class="text-[10px]">Tracciamento</span>
+      </button>
+      <button class="budget-mobile-nav flex flex-col items-center gap-0.5 p-2 text-slate-400" data-tab="survival">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        <span class="text-[10px]">Sopravvivenza</span>
       </button>
       <button class="budget-mobile-nav flex flex-col items-center gap-0.5 p-2 text-slate-400" data-tab="insights">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
@@ -695,6 +764,7 @@
         document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
         if (btn.dataset.tab === 'insights') renderInsights();
         if (btn.dataset.tab === 'gamification') renderGamification();
+        if (btn.dataset.tab === 'survival') loadSurvival();
       });
     });
 
@@ -707,6 +777,7 @@
         document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
         if (btn.dataset.tab === 'insights') renderInsights();
         if (btn.dataset.tab === 'gamification') renderGamification();
+        if (btn.dataset.tab === 'survival') loadSurvival();
       });
     });
 
@@ -777,6 +848,77 @@
         </div>
       `).join('');
     }
+
+    async function loadSurvival() {
+      try {
+        const res = await fetch('/budget/advice');
+        const data = await res.json();
+        const tipEl = document.getElementById('survivalTip');
+        const actionsEl = document.getElementById('survivalActions');
+        const dailyBudgetEl = document.getElementById('dailyBudget');
+        const foodGoalEl = document.getElementById('foodGoal');
+        const transportGoalEl = document.getElementById('transportGoal');
+        const remainingGoalEl = document.getElementById('remainingGoal');
+        const dailyFoodBudgetEl = document.getElementById('dailyFoodBudget');
+
+        if (tipEl && data.tip) tipEl.textContent = data.tip;
+
+        if (actionsEl && Array.isArray(data.actions)) {
+          actionsEl.innerHTML = data.actions.map(a => `<li class="flex items-start gap-2"><span class="text-neon-400 mt-0.5">▸</span><span>${escapeHtml(a)}</span></li>`).join('');
+        }
+
+        if (data.goals) {
+          const g = data.goals;
+          if (dailyBudgetEl) dailyBudgetEl.textContent = fmt(g.daily_budget || 0);
+          if (g.goals && g.goals.length >= 4) {
+            const food = g.goals[0];
+            const transport = g.goals[1];
+            const remaining = g.goals[3];
+            if (foodGoalEl) {
+              foodGoalEl.textContent = fmt(food.spent || 0) + ' / ' + fmt(food.limit || 0);
+              foodGoalEl.className = 'text-xl font-bold ' + (food.status === 'over' ? 'text-alert-500' : 'text-white');
+            }
+            if (dailyFoodBudgetEl) dailyFoodBudgetEl.textContent = fmt(food.daily_budget || 0);
+            if (transportGoalEl) {
+              transportGoalEl.textContent = fmt(transport.spent || 0) + ' / ' + fmt(transport.limit || 0);
+              transportGoalEl.className = 'text-xl font-bold ' + (transport.status === 'over' ? 'text-alert-500' : 'text-white');
+            }
+            if (remainingGoalEl) {
+              remainingGoalEl.textContent = fmt(remaining.value ?? remaining.limit);
+              remainingGoalEl.className = 'text-xl font-bold ' + (remaining.status === 'over' ? 'text-alert-500' : 'text-neon-400');
+            }
+          }
+        }
+
+        loadSurvivalChecklist();
+      } catch (e) {
+        const tipEl = document.getElementById('survivalTip');
+        if (tipEl) tipEl.textContent = 'Carica il tracker per vedere i consigli di sopravvivenza.';
+      }
+    }
+
+    function loadSurvivalChecklist() {
+      const checks = JSON.parse(localStorage.getItem('survival_checklist_v1') || '{}');
+      document.querySelectorAll('.survival-check').forEach(cb => {
+        const key = cb.dataset.task;
+        const today = new Date().toISOString().slice(0, 10);
+        cb.checked = !!(checks[today] && checks[today][key]);
+      });
+    }
+
+    function saveSurvivalChecklist() {
+      const checks = JSON.parse(localStorage.getItem('survival_checklist_v1') || '{}');
+      const today = new Date().toISOString().slice(0, 10);
+      if (!checks[today]) checks[today] = {};
+      document.querySelectorAll('.survival-check').forEach(cb => {
+        checks[today][cb.dataset.task] = cb.checked;
+      });
+      localStorage.setItem('survival_checklist_v1', JSON.stringify(checks));
+    }
+
+    document.querySelectorAll('.survival-check').forEach(cb => {
+      cb.addEventListener('change', saveSurvivalChecklist);
+    });
 
     function refreshAll() {
       const status = loadStatus();
