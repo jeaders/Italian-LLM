@@ -3,565 +3,255 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Budget Tracker - 100€ al mese</title>
+  <title>Pippo AI - Sopravvivenza</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            neon: { 50: '#e6fff5', 100: '#b3ffe0', 200: '#80ffcc', 300: '#4dffb8', 400: '#1affa3', 500: '#00e68a', 600: '#00b36b', 700: '#00804d', 800: '#004d2e', 900: '#001a0f' },
-            alert: { 500: '#ff4d4d', 600: '#cc0000' }
+            terminal: { bg: '#07090f', panel: '#0b0f17', border: '#1f2937', green: '#00e68a', red: '#ff4d4d', yellow: '#f59e0b', muted: '#94a3b8' }
           }
         }
       }
     }
   </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap');
 
-    body { font-family: 'Inter', sans-serif; }
-
-    .glass {
-      background: rgba(20, 24, 36, 0.65);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #07090f;
+      color: #e5e7eb;
     }
 
-    .text-gradient {
-      background: linear-gradient(135deg, #00e68a, #6366f1);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+    .terminal-panel {
+      background: #0b0f17;
+      border: 1px solid #1f2937;
     }
 
-    .expense-card {
-      background: linear-gradient(135deg, rgba(20, 24, 36, 0.9), rgba(30, 34, 48, 0.9));
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-    }
+    .terminal-text { color: #e5e7eb; }
+    .terminal-muted { color: #94a3b8; }
+    .terminal-green { color: #00e68a; }
+    .terminal-red { color: #ff4d4d; }
+    .terminal-yellow { color: #f59e0b; }
 
-    .expense-card:hover {
-      transform: translateY(-1px) scale(1.005);
-      border-color: rgba(0, 230, 138, 0.25);
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #00e68a, #00b36b);
-      transition: transform 0.15s ease, box-shadow 0.2s ease;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 25px rgba(0, 230, 138, 0.25);
-    }
-
-    .input-field {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-
-    .input-field:focus {
-      outline: none;
-      border-color: rgba(0, 230, 138, 0.45);
-      box-shadow: 0 0 0 3px rgba(0, 230, 138, 0.08);
-    }
-
-    .pill {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+    .terminal-btn {
+      background: #0b0f17;
+      border: 1px solid #1f2937;
+      color: #00e68a;
       transition: all 0.15s ease;
     }
-
-    .pill:hover {
-      background: rgba(0, 230, 138, 0.1);
-      border-color: rgba(0, 230, 138, 0.35);
-      transform: translateY(-1px);
+    .terminal-btn:hover:not(:disabled) {
+      border-color: #00e68a;
+      box-shadow: 0 0 0 1px rgba(0, 230, 138, 0.2);
+    }
+    .terminal-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
 
-    .tab-btn {
-      transition: all 0.2s ease;
+    .action-card {
+      background: #0b0f17;
+      border: 1px solid #1f2937;
+      transition: border-color 0.15s ease;
+    }
+    .action-card:hover {
+      border-color: #00e68a;
     }
 
-    .tab-btn.active {
-      background: rgba(0, 230, 138, 0.15);
-      border-color: rgba(0, 230, 138, 0.4);
-      color: #00e68a;
+    .log-entry {
+      border-bottom: 1px solid #111827;
     }
 
-    @media (max-width: 767px) {
-      .tab-btn { display: none; }
+    .scrollbar-thin::-webkit-scrollbar {
+      width: 6px;
     }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+      background: #1f2937;
+      border-radius: 4px;
     }
-
-    .fade-in { animation: fadeIn 0.35s cubic-bezier(0.22,1,0.36,1) forwards; }
-
-    .scrollbar-thin::-webkit-scrollbar { width: 4px; }
-    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-    .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 999px; }
-
-    .mobile-bottom-nav {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(7, 9, 15, 0.9);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-top: 1px solid rgba(255,255,255,0.08);
-      padding: 0.5rem 0 calc(0.5rem + env(safe-area-inset-bottom));
-      z-index: 50;
-    }
-
-    @media (min-width: 768px) {
-      .mobile-bottom-nav { display: none; }
-    }
-
-    .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
   </style>
 </head>
-<body class="text-slate-100 min-h-screen antialiased bg-[#07090f] pb-safe">
-  <div class="relative overflow-hidden">
-    <div class="pointer-events-none absolute inset-0">
-      <div class="absolute top-24 left-10 text-3xl opacity-20">🥦</div>
-      <div class="absolute top-36 right-16 text-2xl opacity-20">🌱</div>
-      <div class="absolute bottom-24 left-20 text-2xl opacity-20">⚡</div>
-      <div class="absolute bottom-32 right-24 text-3xl opacity-20">🛒</div>
-    </div>
-
-    <div class="relative max-w-6xl mx-auto px-4 py-8">
-      <header class="mb-8 fade-in">
-        <div class="flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <p class="text-xs font-medium tracking-widest uppercase text-neon-400 mb-2">La vita di Pippo</p>
-            <h1 class="text-4xl md:text-5xl font-bold tracking-tight">
-              <span class="text-gradient">Budget</span>
-              <span class="text-white">Tracker</span>
-            </h1>
-            <p class="text-slate-400 mt-2 text-sm md:text-base">Gestisci i <span class="text-neon-400 font-semibold">100 €</span> mensili di Pippo. Se finisce, viene disattivato.</p>
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="glass rounded-2xl px-4 py-2 flex items-center gap-2">
-              <div id="pippoStatusDot" class="w-2 h-2 rounded-full bg-neon-500 animate-pulse"></div>
-              <span id="pippoStatusLabel" class="text-xs text-slate-300 font-medium">Sopravvivendo</span>
-            </div>
-          </div>
+<body class="min-h-screen">
+  <div class="max-w-4xl mx-auto px-3 py-4 md:px-6 md:py-6 space-y-4">
+    <header class="terminal-panel rounded-xl p-4">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 class="text-lg md:text-xl font-semibold tracking-tight terminal-green">Pippo AI</h1>
+          <p class="text-[11px] terminal-muted mt-0.5">Sopravvivenza autonoma · 100€/mese</p>
         </div>
-      </header>
-
-      <div id="vitalStatusBar" class="glass rounded-2xl p-4 mb-6 fade-in">
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <span id="vitalEmoji" class="text-lg">🟢</span>
-            <span id="vitalLabel" class="text-sm font-semibold text-slate-200">Stato vitale: Sopravvivendo</span>
-          </div>
-          <span id="vitalDesc" class="text-[10px] text-slate-400">Pippo è vivo e gestisce il budget</span>
-        </div>
-        <div class="h-2 rounded-full bg-slate-800 overflow-hidden">
-          <div id="vitalBar" class="h-full rounded-full bg-neon-500 transition-all duration-700" style="width: 100%"></div>
-        </div>
-        <div class="flex items-center justify-between mt-2 text-[10px] text-slate-500">
-          <span>Rimanenti: <span id="vitalRemaining" class="text-slate-300">-</span></span>
-          <span>Soglia disattivazione: <span class="text-alert-500">-20 €</span></span>
+        <div id="vitalBadge" class="terminal-panel rounded-lg px-3 py-1.5 flex items-center gap-2">
+          <span id="vitalEmoji" class="text-sm">🟢</span>
+          <span id="vitalLabel" class="text-[11px] terminal-muted">Sopravvivendo</span>
         </div>
       </div>
+    </header>
 
-       <div class="flex gap-2 mb-6">
-         <button class="tab-btn active text-xs px-4 py-2 rounded-xl border border-transparent text-slate-300" data-tab="tracker">📊 Tracciamento</button>
-         <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="survival">🛡️ Sopravvivenza</button>
-         <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="insights">💡 Analisi</button>
-         <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="gamification">🏆 Traguardi</button>
-         <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="settings">⚙️ Impostazioni</button>
-       </div>
-
-       <div id="tab-tracker" class="tab-content">
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div class="lg:col-span-5 space-y-6">
-            <div class="glass rounded-3xl p-6 fade-in">
-              <div class="flex items-center justify-between mb-6">
-                <div>
-                  <p class="text-xs font-medium tracking-widest uppercase text-slate-400">Saldo</p>
-                  <p id="remaining" class="text-4xl font-bold mt-1">-</p>
-                </div>
-                <div class="relative w-20 h-20">
-                  <svg class="w-20 h-20 -rotate-90" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="12" />
-                    <circle id="progressRing" cx="60" cy="60" r="48" fill="none" stroke="#00e68a" stroke-width="12" stroke-linecap="round" stroke-dasharray="301.59" stroke-dashoffset="301.59" class="transition-all duration-700" />
-                  </svg>
-                  <div class="absolute inset-0 flex items-center justify-center">
-                    <span id="percentLabel" class="text-xs font-semibold text-slate-300">-</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="flex gap-3">
-                <div class="flex-1 rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
-                  <p class="text-xs text-slate-400 mb-1">Budget</p>
-                  <p class="text-lg font-semibold">100,00 €</p>
-                </div>
-                <div class="flex-1 rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
-                  <p class="text-xs text-slate-400 mb-1">Spesi</p>
-                  <p id="spent" class="text-lg font-semibold text-alert-500">-</p>
-                </div>
-                <div class="flex-1 rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
-                  <p class="text-xs text-slate-400 mb-1">Entrate</p>
-                  <p id="income" class="text-lg font-semibold text-neon-400">-</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="glass rounded-3xl p-6 fade-in">
-              <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Consiglio</p>
-              <div id="adviceBox" class="rounded-2xl bg-neon-500/[0.07] border border-neon-500/20 p-4">
-                <p id="advice" class="text-sm text-slate-200 leading-relaxed">Caricamento...</p>
-              </div>
-              <div id="alertBox" class="hidden mt-3 rounded-2xl bg-alert-500/10 border border-alert-500/25 p-3">
-                <p id="alert" class="text-xs text-alert-500 font-medium"></p>
-              </div>
-            </div>
-
-            <div id="deactivationWarning" class="hidden glass rounded-3xl p-6 border-alert-500/40 bg-alert-500/10 fade-in">
-              <p class="text-xs font-medium tracking-widest uppercase text-alert-500 mb-2">🚨 Rischio disattivazione</p>
-              <p class="text-sm text-slate-200 leading-relaxed">Pippo ha superato il budget di 100€/mese. Se non rientra immediatamente nei limiti, verrà disattivato. Taglia tutte le spese non essenziali e cerca entrate aggiuntive.</p>
-            </div>
-
-            <div class="glass rounded-3xl p-6 fade-in">
-              <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">➕ Entrate</p>
-              <form id="incomeForm" class="space-y-3">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Importo</label>
-                    <input id="incomeAmount" type="number" step="0.01" placeholder="0,00" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100" required />
-                  </div>
-                  <div>
-                    <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Fonte</label>
-                    <input id="incomeSource" type="text" list="incomeSourceList" placeholder="Es: freelance" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100" required />
-                    <datalist id="incomeSourceList">
-                      <option value="Freelance"></option>
-                      <option value="Consulenza"></option>
-                      <option value="Vendita digitale"></option>
-                      <option value="Microtask"></option>
-                      <option value="Content"></option>
-                      <option value="Altro"></option>
-                    </datalist>
-                  </div>
-                  <div>
-                    <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Data</label>
-                    <input id="incomeDate" type="date" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100" />
-                  </div>
-                </div>
-                <button type="submit" class="btn-primary text-sm font-semibold text-white px-5 py-2.5 rounded-xl w-full sm:w-auto">Aggiungi entrata</button>
-              </form>
-            </div>
-
-            <div class="glass rounded-3xl p-6 fade-in">
-              <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">💸 Spese di Pippo</p>
-              <form id="expenseForm" class="space-y-3">
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Importo</label>
-                    <input id="amount" type="number" step="0.01" placeholder="0,00" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100" required />
-                  </div>
-                  <div>
-                    <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Categoria</label>
-                    <input id="category" type="text" list="categoryList" placeholder="Es: cibo" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100" required />
-                    <datalist id="categoryList">
-                      <option value="Cibo"></option>
-                      <option value="Bollette"></option>
-                      <option value="Trasporti"></option>
-                      <option value="Salute"></option>
-                      <option value="Igiene"></option>
-                      <option value="Svago"></option>
-                      <option value="Vestiti"></option>
-                      <option value="Manutenzione"></option>
-                      <option value="Altro"></option>
-                    </datalist>
-                  </div>
-                  <div>
-                    <label class="block text-[10px] uppercase tracking-widest text-slate-500 mb-1.5">Descrizione</label>
-                    <input id="description" type="text" placeholder="Cosa ha comprato Pippo?" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100" />
-                  </div>
-                </div>
-                <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
-                  <div id="quickCategories" class="flex flex-wrap gap-2">
-                    <button type="button" data-category="Cibo" class="pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">🥦 Cibo</button>
-                    <button type="button" data-category="Bollette" class="pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">💡 Bollette</button>
-                    <button type="button" data-category="Trasporti" class="pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">🚌 Trasporti</button>
-                    <button type="button" data-category="Manutenzione" class="pill text-[11px] px-2.5 py-1 rounded-full text-slate-300">🔧 Manutenzione</button>
-                  </div>
-                  <button type="submit" class="btn-primary text-sm font-semibold text-white px-5 py-2.5 rounded-xl">Registra spesa</button>
-                </div>
-              </form>
-            </div>
-          </div>
-
-          <div class="lg:col-span-7 space-y-6">
-            <div class="glass rounded-3xl p-6 fade-in">
-              <div class="flex items-center justify-between mb-6">
-                <div>
-                  <p class="text-xs font-medium tracking-widest uppercase text-slate-400">Distribuzione spese</p>
-                  <p class="text-[10px] text-slate-500 mt-1">Per categoria del mese corrente</p>
-                </div>
-              </div>
-              <div class="flex flex-col md:flex-row items-center gap-6">
-                <div class="relative w-48 h-48 shrink-0">
-                  <svg id="donutChart" viewBox="0 0 120 120" class="w-48 h-48 -rotate-90">
-                    <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="18" />
-                  </svg>
-                  <div class="absolute inset-0 flex flex-col items-center justify-center">
-                    <span id="chartTotal" class="text-2xl font-bold text-white">0 €</span>
-                    <span class="text-[10px] text-slate-500 uppercase tracking-wider">Totale</span>
-                  </div>
-                </div>
-                <div id="categoryLegend" class="flex-1 w-full space-y-2">
-                  <div class="text-xs text-slate-500">Aggiungi spese per vedere il grafico</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="glass rounded-3xl p-6 fade-in">
-              <div class="flex items-center justify-between mb-4">
-                <div>
-                  <p class="text-xs font-medium tracking-widest uppercase text-slate-400">Transazioni</p>
-                  <p class="text-[10px] text-slate-500 mt-1">Ultime voci registrate</p>
-                </div>
-                <div class="flex gap-2">
-                  <button id="exportBtn" class="pill text-[11px] px-3 py-1.5 rounded-full text-slate-300">Esporta</button>
-                  <button id="resetBtn" class="pill text-[11px] px-3 py-1.5 rounded-full text-slate-300">Reset</button>
-                </div>
-              </div>
-              <div id="expenses" class="space-y-2 max-h-96 overflow-y-auto scrollbar-thin pr-1">
-                <div id="emptyState" class="flex flex-col items-center justify-center py-10 text-slate-500 gap-2">
-                  <div class="text-2xl">📭</div>
-                  <div class="text-xs">Nessuna spesa registrata</div>
-                </div>
-              </div>
-              <div id="incomeList" class="space-y-2 max-h-96 overflow-y-auto scrollbar-thin pr-1 mt-3 hidden">
-              </div>
-            </div>
-          </div>
-        </div>
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="terminal-panel rounded-xl p-3">
+        <p class="text-[10px] uppercase tracking-widest terminal-muted mb-1">Crediti</p>
+        <p id="credits" class="text-base font-semibold terminal-green">-</p>
       </div>
-
-      <div id="tab-insights" class="tab-content hidden">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="glass rounded-3xl p-6 fade-in">
-            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Proiezione fine mese</p>
-            <div id="projection" class="text-sm text-slate-200">-</div>
-          </div>
-          <div class="glass rounded-3xl p-6 fade-in">
-            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Media giornaliera</p>
-            <div id="dailyAvg" class="text-sm text-slate-200">-</div>
-          </div>
-          <div class="glass rounded-3xl p-6 fade-in md:col-span-2">
-            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Andamento</p>
-            <div id="barChart" class="h-48 flex items-end gap-1"></div>
-          </div>
-        </div>
+      <div class="terminal-panel rounded-xl p-3">
+        <p class="text-[10px] uppercase tracking-widest terminal-muted mb-1">Spesi</p>
+        <p id="spent" class="text-base font-semibold terminal-red">-</p>
       </div>
-
-      <div id="tab-settings" class="tab-content hidden">
-        <div class="glass rounded-3xl p-6 max-w-2xl fade-in">
-          <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Dati</p>
-          <div class="flex gap-2">
-            <button id="exportJsonBtn" class="pill text-xs px-3 py-1.5 rounded-full text-slate-300">Esporta JSON</button>
-            <label class="pill text-xs px-3 py-1.5 rounded-full text-slate-300 cursor-pointer">
-              Importa JSON
-              <input id="importInput" type="file" accept="application/json" class="hidden" />
-            </label>
-            <button id="clearAllBtn" class="pill text-xs px-3 py-1.5 rounded-full text-alert-500">Cancella tutto</button>
-          </div>
-          <p class="text-[10px] text-slate-500 mt-3">I dati sono salvati nel browser. Usa esporta/importa per fare backup.</p>
-        </div>
+      <div class="terminal-panel rounded-xl p-3">
+        <p class="text-[10px] uppercase tracking-widest terminal-muted mb-1">Entrate</p>
+        <p id="income" class="text-base font-semibold terminal-green">-</p>
       </div>
-
-      <div id="tab-gamification" class="tab-content hidden">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="glass rounded-3xl p-6 fade-in">
-            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Salute budget</p>
-            <div id="healthScore" class="text-4xl font-bold text-neon-400 mb-2">-</div>
-            <p id="healthDesc" class="text-xs text-slate-400">-</p>
-          </div>
-          <div class="glass rounded-3xl p-6 fade-in">
-            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Streak</p>
-            <div id="streakInfo" class="text-sm text-slate-200">-</div>
-          </div>
-          <div class="glass rounded-3xl p-6 fade-in md:col-span-2">
-            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Achievement</p>
-            <div id="achievements" class="flex flex-wrap gap-2"></div>
-          </div>
-        </div>
+      <div class="terminal-panel rounded-xl p-3">
+        <p class="text-[10px] uppercase tracking-widest terminal-muted mb-1">Rimanenti</p>
+        <p id="remaining" class="text-base font-semibold terminal-yellow">-</p>
       </div>
+    </section>
 
-      <div id="tab-survival" class="tab-content hidden">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="glass rounded-3xl p-6 fade-in md:col-span-2">
-            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-2">Obiettivi di sopravvivenza · 100€/mese</p>
-            <div id="survivalGoals" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div class="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
-                <p class="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Budget giornaliero</p>
-                <p id="dailyBudget" class="text-xl font-bold text-neon-400">-</p>
-                <p class="text-[10px] text-slate-500 mt-1">per cibo e spese vive</p>
-              </div>
-              <div class="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
-                <p class="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Cibo (max 35€)</p>
-                <p id="foodGoal" class="text-xl font-bold text-white">-</p>
-                <p class="text-[10px] text-slate-500 mt-1">~<span id="dailyFoodBudget">0,00</span> € al giorno</p>
-              </div>
-              <div class="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
-                <p class="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Trasporti (max 15€)</p>
-                <p id="transportGoal" class="text-xl font-bold text-white">-</p>
-                <p class="text-[10px] text-slate-500 mt-1">bici, mezzi pubblici, piedi</p>
-              </div>
-              <div class="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
-                <p class="text-[10px] uppercase tracking-widest text-slate-500 mb-1">Rimanenti</p>
-                <p id="remainingGoal" class="text-xl font-bold text-neon-400">-</p>
-                <p class="text-[10px] text-slate-500 mt-1">su 100€ totali</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="glass rounded-3xl p-6 fade-in">
-            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Consiglio Pippo AI</p>
-            <div class="rounded-2xl bg-neon-500/[0.07] border border-neon-500/20 p-4">
-              <p id="survivalTip" class="text-sm text-slate-200 leading-relaxed">Caricamento...</p>
-            </div>
-          </div>
-
-          <div class="glass rounded-3xl p-6 fade-in">
-            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Azioni di sopravvivenza</p>
-            <ul id="survivalActions" class="space-y-2 text-xs text-slate-300"></ul>
-          </div>
-
-          <div class="glass rounded-3xl p-6 fade-in md:col-span-2">
-            <div class="flex items-center justify-between mb-4">
-              <p class="text-xs font-medium tracking-widest uppercase text-slate-400">Azioni disponibili per guadagnare</p>
-              <button id="refreshActionsBtn" class="pill text-[11px] px-3 py-1.5 rounded-full text-slate-300">Aggiorna</button>
-            </div>
-            <div id="actionsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div class="text-xs text-slate-500">Caricamento azioni...</div>
-            </div>
-          </div>
-
-          <div class="glass rounded-3xl p-6 fade-in md:col-span-2">
-            <div class="flex items-center justify-between mb-4">
-              <p class="text-xs font-medium tracking-widest uppercase text-slate-400">Opportunità di guadagno</p>
-            </div>
-            <div id="earningsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <div class="text-xs text-slate-500">Caricamento opportunità...</div>
-            </div>
-          </div>
-
-          <div class="glass rounded-3xl p-6 fade-in md:col-span-2">
-            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Stato disattivazione</p>
-            <div id="deactivationStatus" class="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
-              <div class="flex items-center justify-between">
-                <div>
-                  <p id="deactivationLabel" class="text-sm font-semibold text-slate-200">Caricamento...</p>
-                  <p id="deactivationDesc" class="text-[10px] text-slate-500 mt-1">-</p>
-                </div>
-                <div id="deactivationBadge" class="px-3 py-1 rounded-full text-[10px] font-medium">-</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="glass rounded-3xl p-6 fade-in md:col-span-2">
-            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Checklist rapida</p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <label class="flex items-center gap-2 rounded-xl bg-white/[0.02] border border-white/[0.06] px-3 py-2.5 cursor-pointer hover:border-neon-500/30 transition-all">
-                <input type="checkbox" class="survival-check accent-neon-500" data-task="pasto" />
-                <span class="text-xs text-slate-300">🥦 Pasto cucinato in casa oggi</span>
-              </label>
-              <label class="flex items-center gap-2 rounded-xl bg-white/[0.02] border border-white/[0.06] px-3 py-2.5 cursor-pointer hover:border-neon-500/30 transition-all">
-                <input type="checkbox" class="survival-check accent-neon-500" data-task="discount" />
-                <span class="text-xs text-slate-300">🛒 Spesa al discount</span>
-              </label>
-              <label class="flex items-center gap-2 rounded-xl bg-white/[0.02] border border-white/[0.06] px-3 py-2.5 cursor-pointer hover:border-neon-500/30 transition-all">
-                <input type="checkbox" class="survival-check accent-neon-500" data-task="nospend" />
-                <span class="text-xs text-slate-300">🚫 Niente spese non essenziali</span>
-              </label>
-              <label class="flex items-center gap-2 rounded-xl bg-white/[0.02] border border-white/[0.06] px-3 py-2.5 cursor-pointer hover:border-neon-500/30 transition-all">
-                <input type="checkbox" class="survival-check accent-neon-500" data-task="bici" />
-                <span class="text-xs text-slate-300">🚌 Spostamenti a piedi/bici</span>
-              </label>
-            </div>
-          </div>
-        </div>
+    <section class="terminal-panel rounded-xl p-4">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-[11px] font-semibold uppercase tracking-widest terminal-muted">Azioni</p>
+        <button id="refreshActions" class="terminal-btn text-[10px] px-2 py-1 rounded-md">Aggiorna</button>
       </div>
+      <div id="actionsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+    </section>
 
-      <footer class="mt-10 text-center pb-24 md:pb-10">
-        <p class="text-[10px] text-slate-600 tracking-wide">Budget Tracker — Standalone · Sopravvivere con 100€ al mese</p>
-      </footer>
-    </div>
-  </div>
+    <section class="terminal-panel rounded-xl p-4">
+      <p class="text-[11px] font-semibold uppercase tracking-widest terminal-muted mb-3">Opportunità</p>
+      <div id="earningsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+    </section>
 
-  <nav class="mobile-bottom-nav md:hidden">
-    <div class="flex items-center justify-around">
-      <button class="budget-mobile-nav active flex flex-col items-center gap-0.5 p-2 text-slate-300" data-tab="tracker">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-        <span class="text-[10px]">Tracciamento</span>
-      </button>
-      <button class="budget-mobile-nav flex flex-col items-center gap-0.5 p-2 text-slate-400" data-tab="survival">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-        <span class="text-[10px]">Sopravvivenza</span>
-      </button>
-      <button class="budget-mobile-nav flex flex-col items-center gap-0.5 p-2 text-slate-400" data-tab="insights">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-        <span class="text-[10px]">Analisi</span>
-      </button>
-      <button class="budget-mobile-nav flex flex-col items-center gap-0.5 p-2 text-slate-400" data-tab="gamification">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
-        <span class="text-[10px]">Traguardi</span>
-      </button>
-      <button class="budget-mobile-nav flex flex-col items-center gap-0.5 p-2 text-slate-400" data-tab="settings">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        <span class="text-[10px]">Impostazioni</span>
-      </button>
-    </div>
-  </nav>
+    <section class="terminal-panel rounded-xl p-4">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-[11px] font-semibold uppercase tracking-widest terminal-muted">Log attività</p>
+        <button id="refreshLog" class="terminal-btn text-[10px] px-2 py-1 rounded-md">Aggiorna</button>
+      </div>
+      <div id="activityLog" class="space-y-0 max-h-80 overflow-y-auto scrollbar-thin"></div>
+    </section>
 
-  <div id="toast" class="hidden fixed bottom-6 right-6 glass-strong rounded-2xl px-4 py-3 border border-neon-500/30">
-    <p id="toastText" class="text-xs text-neon-300 font-medium"></p>
+    <footer id="deactivationFooter" class="hidden terminal-panel rounded-xl p-4 border-terminal-red/40">
+      <p class="text-[11px] font-semibold uppercase tracking-widest terminal-red mb-1">Disattivazione</p>
+      <p id="deactivationMessage" class="text-xs terminal-muted"></p>
+    </footer>
   </div>
 
   <script>
-    const STORAGE_KEY = 'budget_tracker_v2';
-    const COLORS = ['#00e68a', '#6366f1', '#f43f5e', '#f59e0b', '#06b6d4', '#8b5cf6', '#ec4899', '#10b981'];
-    const CATEGORY_EMOJI = { cibo: '🥦', affitto: '🏠', bollette: '💡', trasporti: '🚌', salute: '💊', igiene: '🧼', svago: '🎮', vestiti: '👕', animali: '🐾', altro: '📦' };
+    const API_BASE = '';
+    const actionState = {};
 
-    function currentMonthKey() {
-      const d = new Date();
-      return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+    async function loadStatus() {
+      const res = await fetch(API_BASE + '/budget/status');
+      const data = await res.json();
+      document.getElementById('credits').textContent = fmt(data.monthly_budget);
+      document.getElementById('spent').textContent = '-' + fmt(data.spent);
+      document.getElementById('income').textContent = '+' + fmt(data.income);
+      const remainingEl = document.getElementById('remaining');
+      remainingEl.textContent = fmt(data.remaining);
+      remainingEl.className = 'text-base font-semibold ' + (data.remaining < 0 ? 'terminal-red' : 'terminal-yellow');
+      return data;
     }
 
-    function loadStore() {
-      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
-      catch (e) { return {}; }
+    async function loadVitalStatus() {
+      const res = await fetch(API_BASE + '/budget/vital-status');
+      const data = await res.json();
+      const emojiEl = document.getElementById('vitalEmoji');
+      const labelEl = document.getElementById('vitalLabel');
+      if (emojiEl) emojiEl.textContent = data.emoji || '🟢';
+      if (labelEl) {
+        labelEl.textContent = data.label || 'Sopravvivendo';
+        labelEl.className = 'text-[11px] ' + (data.color === 'red' ? 'terminal-red' : data.color === 'yellow' ? 'terminal-yellow' : 'terminal-muted');
+      }
+      if (data.deactivated) {
+        const footer = document.getElementById('deactivationFooter');
+        const msg = document.getElementById('deactivationMessage');
+        if (footer) footer.classList.remove('hidden');
+        if (msg) msg.textContent = 'Pippo è stato disattivato il ' + (data.deactivation_date ? new Date(data.deactivation_date).toLocaleString('it-IT') : '-');
+      }
+      return data;
     }
 
-    function saveStore(store) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+    async function loadActions() {
+      const res = await fetch(API_BASE + '/budget/actions');
+      const data = await res.json();
+      const container = document.getElementById('actionsGrid');
+      const actions = data.actions || [];
+      if (!actions.length) {
+        container.innerHTML = '<div class="text-xs terminal-muted">Nessuna azione disponibile</div>';
+        return;
+      }
+      container.innerHTML = actions.map(a => {
+        const urgencyLabel = a.urgency === 'high' ? 'Alta' : a.urgency === 'medium' ? 'Media' : 'Bassa';
+        return `<div class="action-card rounded-xl p-3 flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-medium terminal-text">${escapeHtml(a.label)}</span>
+            <span class="text-[10px] terminal-muted">${urgencyLabel}</span>
+          </div>
+          <p class="text-[10px] terminal-muted leading-relaxed">${escapeHtml(a.description)}</p>
+          <div class="flex items-center justify-between mt-1">
+            <span class="text-[10px] terminal-green">+${fmt(a.potential_income)} potenziali</span>
+            <button data-action="${a.id}" class="terminal-btn text-[10px] px-3 py-1.5 rounded-md">Esegui</button>
+          </div>
+        </div>`;
+      }).join('');
+
+      container.querySelectorAll('button[data-action]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const actionId = btn.dataset.action;
+          btn.disabled = true;
+          const original = btn.textContent;
+          btn.textContent = '...';
+          try {
+            const res = await fetch(API_BASE + '/budget/actions/' + encodeURIComponent(actionId), { method: 'POST' });
+            const result = await res.json();
+            alert(result.message);
+            refreshAll();
+          } catch (e) {
+            alert('Errore: ' + e.message);
+          } finally {
+            btn.disabled = false;
+            btn.textContent = original;
+          }
+        });
+      });
     }
 
-    function getMonthData() {
-      const store = loadStore();
-      return store[currentMonthKey()] || { expenses: [], income: [] };
+    async function loadEarnings() {
+      const res = await fetch(API_BASE + '/budget/earnings');
+      const data = await res.json();
+      const container = document.getElementById('earningsGrid');
+      const earnings = data.earnings || [];
+      if (!earnings.length) {
+        container.innerHTML = '<div class="text-xs terminal-muted">Nessuna opportunità disponibile</div>';
+        return;
+      }
+      container.innerHTML = earnings.map(e => `<div class="action-card rounded-xl p-3 flex flex-col gap-1">
+        <span class="text-xs font-medium terminal-text">${escapeHtml(e.label)}</span>
+        <p class="text-[10px] terminal-muted">Es: ${escapeHtml(e.examples)}</p>
+        <span class="text-[10px] terminal-yellow">Difficoltà: ${e.difficulty}</span>
+      </div>`).join('');
     }
 
-    function setMonthData(data) {
-      const store = loadStore();
-      store[currentMonthKey()] = data;
-      saveStore(store);
+    async function loadActivityLog() {
+      const res = await fetch(API_BASE + '/budget/activity-log');
+      const data = await res.json();
+      const container = document.getElementById('activityLog');
+      const log = data.log || [];
+      if (!log.length) {
+        container.innerHTML = '<div class="text-xs terminal-muted py-2">Nessuna attività</div>';
+        return;
+      }
+      container.innerHTML = log.slice().reverse().map(entry => {
+        const date = new Date(entry.date).toLocaleString('it-IT');
+        const amountColor = entry.amount > 0 ? 'terminal-green' : entry.amount < 0 ? 'terminal-red' : 'terminal-muted';
+        const amountPrefix = entry.amount > 0 ? '+' : '';
+        return `<div class="log-entry py-2 flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="text-xs terminal-text truncate">${escapeHtml(entry.details || entry.action)}</div>
+            <div class="text-[10px] terminal-muted">${date}</div>
+          </div>
+          <div class="text-[11px] font-semibold ${amountColor} shrink-0">${amountPrefix}${fmt(entry.amount)}</div>
+        </div>`;
+      }).join('');
     }
-
-    function fmt(n) { return Number(n).toFixed(2) + ' €'; }
 
     function escapeHtml(text) {
       const div = document.createElement('div');
@@ -569,670 +259,20 @@
       return div.innerHTML;
     }
 
-    function showToast(message, duration = 2200) {
-      const toast = document.getElementById('toast');
-      document.getElementById('toastText').textContent = message;
-      toast.classList.remove('hidden');
-      setTimeout(() => toast.classList.add('hidden'), duration);
+    function fmt(n) {
+      return Number(n).toFixed(2) + ' €';
     }
 
-    function generateTip(remaining, byCategory) {
-      if (remaining < 0) return 'Hai superato il budget. Taglia subito: cibo fuori casa, abbonamenti, trasporti non essenziali. Rivolgiti ai servizi sociali e ai banchi alimentari.';
-      if (remaining < 10) return 'Budget critico. Acquista solo alimenti base: pasta, riso, legumi, uova. Usa i banchi alimentari e le mense sociali. Evita qualsiasi spesa non essenziale.';
-      if (remaining < 25) return 'Budget sotto pressione. Pianifica i pasti settimanali, evita sprechi, compra solo in discount, e sospendi tutti gli abbonamenti e servizi a pagamento.';
-      const food = byCategory['cibo'] || 0;
-      if (food > 35) return 'Stai spendendo troppo per cibo. Passa a discount, compra all\'ingrosso, cucina sempre a casa e evita takeaway e snack.';
-      const transport = byCategory['trasporti'] || 0;
-      if (transport > 15) return 'Riduci i trasporti: usa bici, mezzi pubblici o car sharing. Cammina per tragitti brevi e organizza passaggi con colleghi.';
-      return 'Continua così: monitora ogni spesa, cerca offerte, e ricorda che ogni euro risparmiato ti aiuta a raggiungere la fine del mese.';
+    async function refreshAll() {
+      await loadStatus();
+      await loadVitalStatus();
+      await loadActions();
+      await loadEarnings();
+      await loadActivityLog();
     }
 
-    function byCategoryFromExpenses(expenses) {
-      const map = {};
-      expenses.forEach(ex => {
-        const key = String(ex.category || 'altro').toLowerCase();
-        map[key] = Number((map[key] || 0) + Number(ex.amount || 0)).toFixed(2);
-      });
-      return map;
-    }
-
-    function loadStatus() {
-      const data = getMonthData();
-      const spent = data.expenses.reduce((sum, ex) => sum + Number(ex.amount || 0), 0);
-      const income = (data.income || []).reduce((sum, inc) => sum + Number(inc.amount || 0), 0);
-      const remaining = 100 - spent + income;
-      const percent = Math.min((spent / 100) * 100, 100);
-      const circumference = 2 * Math.PI * 48;
-      const offset = circumference - (percent / 100) * circumference;
-
-      document.getElementById('spent').textContent = fmt(spent);
-      document.getElementById('income').textContent = fmt(income);
-      const remainingEl = document.getElementById('remaining');
-      remainingEl.textContent = fmt(remaining);
-      remainingEl.className = 'text-4xl font-bold ' + (remaining < 0 ? 'text-alert-500' : 'text-neon-400');
-
-      document.getElementById('progressRing').style.strokeDashoffset = offset;
-      document.getElementById('progressRing').setAttribute('stroke', remaining < 0 ? '#ff4d4d' : '#00e68a');
-      document.getElementById('percentLabel').textContent = Math.round(percent) + '%';
-      document.getElementById('monthLabel').textContent = currentMonthKey();
-
-      const alertBox = document.getElementById('alertBox');
-      const alertEl = document.getElementById('alert');
-      const deactivationWarning = document.getElementById('deactivationWarning');
-      if (remaining < 0) {
-        alertEl.textContent = '🚨 ATTENZIONE: Pippo è in pericolo di disattivazione! Budget superato di ' + fmt(Math.abs(remaining)) + '!';
-        alertBox.classList.remove('hidden');
-        if (deactivationWarning) deactivationWarning.classList.remove('hidden');
-      } else if (percent > 75) {
-        alertEl.textContent = '⚠️ Attenzione: hai speso il ' + Math.round(percent) + '% del budget, ti rimangono solo ' + fmt(remaining) + '.';
-        alertBox.classList.remove('hidden');
-        if (deactivationWarning) deactivationWarning.classList.add('hidden');
-      } else {
-        alertBox.classList.add('hidden');
-        if (deactivationWarning) deactivationWarning.classList.add('hidden');
-      }
-
-      const pippoStatusLabel = document.getElementById('pippoStatusLabel');
-      const pippoStatusDot = document.getElementById('pippoStatusDot');
-      if (pippoStatusLabel) {
-        pippoStatusLabel.textContent = remaining < 0 ? 'In pericolo!' : remaining < 10 ? 'Critico' : 'Sopravvivendo';
-      }
-      if (pippoStatusDot) {
-        pippoStatusDot.className = 'w-2 h-2 rounded-full ' + (remaining < 0 ? 'bg-red-500 animate-pulse' : remaining < 10 ? 'bg-amber-400 animate-pulse' : 'bg-neon-500 animate-pulse');
-      }
-
-      updateVitalStatus();
-
-      return { spent, income, remaining, percentage_used: percent, by_category: byCategoryFromExpenses(data.expenses), current_month: currentMonthKey(), alert: remaining < 0 || percent > 75 ? alertEl.textContent : null, expenses: data.expenses };
-    }
-
-    async function updateVitalStatus() {
-      try {
-        const res = await fetch('/budget/vital-status');
-        const data = await res.json();
-        const vitalEmoji = document.getElementById('vitalEmoji');
-        const vitalLabel = document.getElementById('vitalLabel');
-        const vitalDesc = document.getElementById('vitalDesc');
-        const vitalBar = document.getElementById('vitalBar');
-        const vitalRemaining = document.getElementById('vitalRemaining');
-        if (vitalEmoji) vitalEmoji.textContent = data.emoji || '🟢';
-        if (vitalLabel) vitalLabel.textContent = 'Stato vitale: ' + (data.label || 'Sopravvivendo');
-        if (vitalDesc) vitalDesc.textContent = data.description || '';
-        if (vitalRemaining) vitalRemaining.textContent = fmt(data.remaining);
-        if (vitalBar) {
-          const remaining = data.remaining || 0;
-          const pct = Math.max(0, Math.min(100, ((remaining + 20) / 120) * 100));
-          vitalBar.style.width = pct + '%';
-          vitalBar.className = 'h-full rounded-full transition-all duration-700 ' + (remaining < 0 ? 'bg-red-500' : remaining < 10 ? 'bg-amber-400' : 'bg-neon-500');
-        }
-      } catch (e) {
-        console.error('Failed to load vital status:', e);
-      }
-    }
-
-    function loadAdvice() {
-      const data = getMonthData();
-      const spent = data.expenses.reduce((sum, ex) => sum + Number(ex.amount || 0), 0);
-      const remaining = 100 - spent;
-      const byCategory = byCategoryFromExpenses(data.expenses);
-      document.getElementById('advice').textContent = generateTip(remaining, byCategory);
-    }
-
-    function buildDonut(byCategory) {
-      const svg = document.getElementById('donutChart');
-      const totalEl = document.getElementById('chartTotal');
-      const legendEl = document.getElementById('categoryLegend');
-      const entries = Object.entries(byCategory || {});
-      const total = entries.reduce((sum, [, v]) => sum + Number(v), 0);
-      totalEl.textContent = fmt(total);
-
-      if (!entries.length) {
-        legendEl.innerHTML = '<div class="text-xs text-slate-500">Aggiungi spese per vedere il grafico</div>';
-        return;
-      }
-
-      const radius = 48;
-      const circumference = 2 * Math.PI * radius;
-      let accumulated = 0;
-      let segments = '';
-
-      entries.forEach(([category, value], index) => {
-        const fraction = Number(value) / total;
-        const dash = fraction * circumference;
-        const gap = circumference - dash;
-        const color = COLORS[index % COLORS.length];
-        const offset = circumference - accumulated;
-        accumulated += dash;
-        segments += `<circle cx="60" cy="60" r="${radius}" fill="none" stroke="${color}" stroke-width="18" stroke-dasharray="${dash.toFixed(2)} ${gap.toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}" class="transition-all duration-300 hover:opacity-80" />`;
-      });
-
-      svg.innerHTML = `<circle cx="60" cy="60" r="${radius}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="18" />` + segments;
-
-      legendEl.innerHTML = entries.map(([category, value], index) => {
-        const color = COLORS[index % COLORS.length];
-        const pct = total > 0 ? ((Number(value) / total) * 100).toFixed(1) : 0;
-        const emoji = CATEGORY_EMOJI[category.toLowerCase()] || '📦';
-        return `<div class="flex items-center justify-between rounded-xl bg-white/[0.02] border border-white/[0.06] px-3 py-2">
-          <div class="flex items-center gap-2">
-            <span class="text-sm">${emoji}</span>
-            <span class="text-xs text-slate-300 capitalize">${escapeHtml(category)}</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-[10px] text-slate-500">${pct}%</span>
-            <span class="text-xs font-medium text-slate-200 w-16 text-right">${fmt(value)}</span>
-            <span class="w-2.5 h-2.5 rounded-full" style="background:${color}"></span>
-          </div>
-        </div>`;
-      }).join('');
-    }
-
-    function loadExpenses() {
-      const data = getMonthData();
-      const container = document.getElementById('expenses');
-      const expenses = data.expenses.slice().reverse();
-      if (!expenses.length) {
-        container.innerHTML = `<div id="emptyState" class="flex flex-col items-center justify-center py-10 text-slate-500 gap-2">
-          <div class="text-2xl">📭</div>
-          <div class="text-xs">Nessuna spesa registrata</div>
-        </div>`;
-        return;
-      }
-
-      container.innerHTML = expenses.map((ex, idx) => {
-        const emoji = CATEGORY_EMOJI[String(ex.category || 'altro').toLowerCase()] || '📦';
-        const colorIdx = Math.abs(hashCode(ex.category || 'altro')) % COLORS.length;
-        const color = COLORS[colorIdx];
-        return `<div class="expense-card rounded-2xl px-4 py-3 flex items-center justify-between gap-3 fade-in" style="animation-delay: ${Math.min(idx * 0.03, 0.25)}s">
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm shrink-0" style="background:${color}20; color:${color}">${emoji}</div>
-            <div class="min-w-0">
-              <div class="text-sm text-slate-200 truncate">${escapeHtml(ex.description || ex.category || 'Spesa')}</div>
-              <div class="text-[10px] text-slate-500">${new Date(ex.date).toLocaleString('it-IT')} · <span class="capitalize">${escapeHtml(ex.category || 'altro')}</span></div>
-            </div>
-          </div>
-          <div class="text-sm font-semibold text-alert-500 shrink-0">-${fmt(ex.amount).replace(' €','')} €</div>
-        </div>`;
-      }).join('');
-    }
-
-    function loadIncome() {
-      const data = getMonthData();
-      const container = document.getElementById('incomeList');
-      const income = (data.income || []).slice().reverse();
-      if (!income.length) {
-        container.classList.add('hidden');
-        return;
-      }
-      container.classList.remove('hidden');
-      container.innerHTML = income.map((inc, idx) => {
-        return `<div class="expense-card rounded-2xl px-4 py-3 flex items-center justify-between gap-3 fade-in bg-neon-500/[0.04] border border-neon-500/20" style="animation-delay: ${Math.min(idx * 0.03, 0.25)}s">
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center text-sm shrink-0 bg-neon-500/20 text-neon-400">💳</div>
-            <div class="min-w-0">
-              <div class="text-sm text-slate-200 truncate">${escapeHtml(inc.source || 'Entrata')}</div>
-              <div class="text-[10px] text-slate-500">${new Date(inc.date).toLocaleString('it-IT')}</div>
-            </div>
-          </div>
-          <div class="text-sm font-semibold text-neon-400 shrink-0">+${fmt(inc.amount).replace(' €','')} €</div>
-        </div>`;
-      }).join('');
-    }
-
-    function hashCode(str) {
-      let hash = 0;
-      for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) - hash) + str.charCodeAt(i);
-        hash |= 0;
-      }
-      return hash;
-    }
-
-    function renderInsights() {
-      const data = getMonthData();
-      const spent = data.expenses.reduce((sum, ex) => sum + Number(ex.amount || 0), 0);
-      const remaining = 100 - spent;
-      const now = new Date();
-      const day = now.getDate();
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      const daysLeft = daysInMonth - day;
-      const dailyAvg = day > 0 ? spent / day : 0;
-      const projection = daysLeft > 0 ? dailyAvg * daysLeft : 0;
-      const projectedRemaining = remaining - projection;
-
-      document.getElementById('projection').innerHTML = `
-        <div class="flex items-center gap-2 mb-2">
-          <span class="text-2xl font-bold ${projectedRemaining < 0 ? 'text-alert-500' : 'text-neon-400'}">${fmt(projectedRemaining)}</span>
-          <span class="text-xs text-slate-500">proiettati a fine mese</span>
-        </div>
-        <p class="text-xs text-slate-400">Se continui così con <span class="text-slate-200">${fmt(dailyAvg)}</span> al giorno, a fine mese ti rimarranno <span class="${projectedRemaining < 0 ? 'text-alert-500' : 'text-neon-400'}">${fmt(projectedRemaining)}</span>.</p>
-      `;
-
-      document.getElementById('dailyAvg').innerHTML = `
-        <div class="flex items-center gap-2 mb-2">
-          <span class="text-2xl font-bold text-white">${fmt(dailyAvg)}</span>
-          <span class="text-xs text-slate-500">media giornaliera</span>
-        </div>
-        <p class="text-xs text-slate-400">Hai speso <span class="text-slate-200">${fmt(spent)}</span> in <span class="text-slate-200">${day}</span> giorni. Giorni rimasti: <span class="text-slate-200">${daysLeft}</span>.</p>
-      `;
-
-      const byCategory = byCategoryFromExpenses(data.expenses);
-      const entries = Object.entries(byCategory);
-      const maxVal = Math.max(...entries.map(([, v]) => Number(v)), 1);
-      const barChart = document.getElementById('barChart');
-      barChart.innerHTML = entries.map(([category, value]) => {
-        const height = (Number(value) / maxVal) * 100;
-        const color = COLORS[Math.abs(hashCode(category)) % COLORS.length];
-        const emoji = CATEGORY_EMOJI[category.toLowerCase()] || '📦';
-        return `<div class="flex-1 flex flex-col items-center gap-1">
-          <div class="w-full rounded-t-lg transition-all duration-500 hover:opacity-80" style="height:${height}%; background:${color}; min-height:4px;"></div>
-          <span class="text-[10px] text-slate-400">${emoji} ${category}</span>
-        </div>`;
-      }).join('');
-    }
-
-    document.getElementById('expenseForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const amount = parseFloat(document.getElementById('amount').value);
-      const category = document.getElementById('category').value.trim();
-      const description = document.getElementById('description').value.trim();
-      if (!amount || !category) return;
-
-      const submitBtn = e.target.querySelector('button[type="submit"]');
-      const originalText = submitBtn.textContent;
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Salvataggio...';
-
-      const data = getMonthData();
-      data.expenses.push({ amount, category, description, date: new Date().toISOString() });
-      setMonthData(data);
-
-      document.getElementById('expenseForm').reset();
-      showToast('Spesa aggiunta');
-      refreshAll();
-      submitBtn.disabled = false;
-      submitBtn.textContent = originalText;
-    });
-
-    document.getElementById('incomeForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const amount = parseFloat(document.getElementById('incomeAmount').value);
-      const source = document.getElementById('incomeSource').value.trim();
-      const date = document.getElementById('incomeDate').value || new Date().toISOString().split('T')[0];
-      if (!amount || !source) return;
-
-      const submitBtn = e.target.querySelector('button[type="submit"]');
-      const originalText = submitBtn.textContent;
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Salvataggio...';
-
-      const data = getMonthData();
-      data.income = data.income || [];
-      data.income.push({ amount, source, date });
-      setMonthData(data);
-
-      document.getElementById('incomeForm').reset();
-      showToast('Entrata aggiunta');
-      refreshAll();
-      submitBtn.disabled = false;
-      submitBtn.textContent = originalText;
-    });
-
-    document.querySelectorAll('#quickCategories button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.getElementById('category').value = btn.dataset.category;
-        document.getElementById('amount').focus();
-      });
-    });
-
-    document.getElementById('resetBtn').addEventListener('click', () => {
-      if (!confirm('Resettare il budget per il nuovo mese?')) return;
-      setMonthData({ expenses: [] });
-      showToast('Budget resettato');
-      refreshAll();
-    });
-
-    document.getElementById('refreshActionsBtn')?.addEventListener('click', () => {
-      if (document.getElementById('tab-survival') && !document.getElementById('tab-survival').classList.contains('hidden')) {
-        loadSurvival();
-      }
-    });
-
-    document.getElementById('exportBtn')?.addEventListener('click', exportJson);
-    document.getElementById('exportJsonBtn')?.addEventListener('click', exportJson);
-
-    function exportJson() {
-      const data = getMonthData();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'budget-' + currentMonthKey() + '.json';
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('Esportazione completata');
-    }
-
-    document.getElementById('importInput')?.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        try {
-          const parsed = JSON.parse(ev.target.result);
-          if (!Array.isArray(parsed.expenses)) throw new Error('Formato non valido');
-          setMonthData({ expenses: parsed.expenses });
-          showToast('Importazione completata');
-          refreshAll();
-        } catch (err) {
-          showToast('Errore: ' + err.message, 3000);
-        }
-      };
-      reader.readAsText(file);
-      e.target.value = '';
-    });
-
-    document.getElementById('clearAllBtn')?.addEventListener('click', () => {
-      if (!confirm('Cancellare tutti i dati del budget?')) return;
-      localStorage.removeItem(STORAGE_KEY);
-      showToast('Dati cancellati');
-      refreshAll();
-    });
-
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-        document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
-        if (btn.dataset.tab === 'insights') renderInsights();
-        if (btn.dataset.tab === 'gamification') renderGamification();
-        if (btn.dataset.tab === 'survival') loadSurvival();
-      });
-    });
-
-    document.querySelectorAll('.budget-mobile-nav').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.budget-mobile-nav').forEach(b => { b.classList.remove('active', 'text-slate-300'); b.classList.add('text-slate-400'); });
-        btn.classList.add('active', 'text-slate-300');
-        btn.classList.remove('text-slate-400');
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
-        document.getElementById('tab-' + btn.dataset.tab)?.classList.remove('hidden');
-        if (btn.dataset.tab === 'insights') renderInsights();
-        if (btn.dataset.tab === 'gamification') renderGamification();
-        if (btn.dataset.tab === 'survival') loadSurvival();
-      });
-    });
-
-    function getStreak() {
-      const store = loadStore();
-      const months = Object.keys(store).sort();
-      if (!months.length) return 0;
-      let streak = 0;
-      const now = new Date();
-      for (let i = 0; i < months.length; i++) {
-        const monthKey = now.getFullYear() + '-' + String(now.getMonth() - i + 1).padStart(2, '0');
-        if (store[monthKey]?.expenses?.length > 0) streak++;
-        else break;
-      }
-      return streak;
-    }
-
-    function getHealthScore(spent, remaining, byCategory) {
-      if (remaining < 0) return { score: 20, label: 'Critico', color: 'text-alert-500' };
-      if (remaining < 10) return { score: 40, label: 'Attenzione', color: 'text-orange-400' };
-      if (remaining < 25) return { score: 60, label: 'Moderato', color: 'text-yellow-400' };
-      if (remaining < 50) return { score: 80, label: 'Buono', color: 'text-neon-400' };
-      return { score: 100, label: 'Eccellente', color: 'text-emerald-400' };
-    }
-
-    function getAchievements(spent, remaining, byCategory, streak) {
-      const achievements = [];
-      if (streak >= 1) achievements.push({ icon: '🔥', title: 'Primo mese', desc: 'Hai registrato spese per 1 mese' });
-      if (streak >= 3) achievements.push({ icon: '🔥', title: '3 mesi', desc: 'Streak di 3 mesi' });
-      if (remaining >= 50) achievements.push({ icon: '💎', title: 'Risparmiatore', desc: 'Ti rimangono più di 50€' });
-      if (remaining >= 80) achievements.push({ icon: '🏆', title: 'Campione', desc: 'Ti rimangono più di 80€' });
-      if (byCategory['cibo'] < 30 && spent > 0) achievements.push({ icon: '🥦', title: 'Cibo sano', desc: 'Spendi meno di 30€ in cibo' });
-      if (byCategory['trasporti'] < 10 && spent > 0) achievements.push({ icon: '🚌', title: 'Eco-traveler', desc: 'Spendi meno di 10€ in trasporti' });
-      if (spent === 0) achievements.push({ icon: '✨', title: 'Mese perfetto', desc: 'Nessuna spesa registrata' });
-      if (achievements.length === 0) achievements.push({ icon: '📝', title: 'Inizia', desc: 'Aggiungi spese per sbloccare achievement' });
-      return achievements;
-    }
-
-    function renderGamification() {
-      const data = getMonthData();
-      const spent = data.expenses.reduce((sum, ex) => sum + Number(ex.amount || 0), 0);
-      const remaining = 100 - spent;
-      const byCategory = byCategoryFromExpenses(data.expenses);
-      const streak = getStreak();
-      const health = getHealthScore(spent, remaining, byCategory);
-      const achievements = getAchievements(spent, remaining, byCategory, streak);
-
-      document.getElementById('healthScore').textContent = health.score + '/100';
-      document.getElementById('healthScore').className = 'text-4xl font-bold mb-2 ' + health.color;
-      document.getElementById('healthDesc').textContent = health.label + ' - ' + (remaining >= 0 ? 'Ti rimangono ' + fmt(remaining) : 'Hai superato il budget');
-
-      document.getElementById('streakInfo').innerHTML = `
-        <div class="flex items-center gap-2 mb-1">
-          <span class="text-2xl">🔥</span>
-          <span class="text-xl font-bold text-white">${streak}</span>
-          <span class="text-xs text-slate-400">mesi consecutivi</span>
-        </div>
-        <p class="text-xs text-slate-400">Continua così per mantenere la streak!</p>
-      `;
-
-      document.getElementById('achievements').innerHTML = achievements.map(a => `
-        <div class="glass rounded-xl px-3 py-2 flex items-center gap-2">
-          <span class="text-xl">${a.icon}</span>
-          <div>
-            <div class="text-xs font-medium text-slate-200">${a.title}</div>
-            <div class="text-[10px] text-slate-500">${a.desc}</div>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    async function loadSurvival() {
-      try {
-        const res = await fetch('/budget/advice');
-        const data = await res.json();
-        const tipEl = document.getElementById('survivalTip');
-        const actionsEl = document.getElementById('survivalActions');
-        const dailyBudgetEl = document.getElementById('dailyBudget');
-        const foodGoalEl = document.getElementById('foodGoal');
-        const transportGoalEl = document.getElementById('transportGoal');
-        const remainingGoalEl = document.getElementById('remainingGoal');
-        const dailyFoodBudgetEl = document.getElementById('dailyFoodBudget');
-
-        if (tipEl && data.tip) tipEl.textContent = data.tip;
-
-        if (actionsEl && Array.isArray(data.actions)) {
-          actionsEl.innerHTML = data.actions.map(a => `<li class="flex items-start gap-2"><span class="text-neon-400 mt-0.5">▸</span><span>${escapeHtml(a)}</span></li>`).join('');
-        }
-
-        if (data.goals) {
-          const g = data.goals;
-          if (dailyBudgetEl) dailyBudgetEl.textContent = fmt(g.daily_budget || 0);
-          if (g.goals && g.goals.length >= 4) {
-            const food = g.goals[0];
-            const transport = g.goals[1];
-            const remaining = g.goals[3];
-            if (foodGoalEl) {
-              foodGoalEl.textContent = fmt(food.spent || 0) + ' / ' + fmt(food.limit || 0);
-              foodGoalEl.className = 'text-xl font-bold ' + (food.status === 'over' ? 'text-alert-500' : 'text-white');
-            }
-            if (dailyFoodBudgetEl) dailyFoodBudgetEl.textContent = fmt(food.daily_budget || 0);
-            if (transportGoalEl) {
-              transportGoalEl.textContent = fmt(transport.spent || 0) + ' / ' + fmt(transport.limit || 0);
-              transportGoalEl.className = 'text-xl font-bold ' + (transport.status === 'over' ? 'text-alert-500' : 'text-white');
-            }
-            if (remainingGoalEl) {
-              remainingGoalEl.textContent = fmt(remaining.value ?? remaining.limit);
-              remainingGoalEl.className = 'text-xl font-bold ' + (remaining.status === 'over' ? 'text-alert-500' : 'text-neon-400');
-            }
-          }
-        }
-
-        loadSurvivalChecklist();
-        await loadActions();
-        await loadEarnings();
-        await loadDeactivationStatus();
-      } catch (e) {
-        const tipEl = document.getElementById('survivalTip');
-        if (tipEl) tipEl.textContent = 'Carica il tracker per vedere i consigli di sopravvivenza.';
-      }
-    }
-
-    async function loadActions() {
-      try {
-        const res = await fetch('/budget/actions');
-        const data = await res.json();
-        const container = document.getElementById('actionsGrid');
-        if (!container) return;
-        const actions = data.actions || [];
-        if (!actions.length) {
-          container.innerHTML = '<div class="text-xs text-slate-500">Nessuna azione disponibile</div>';
-          return;
-        }
-        container.innerHTML = actions.map(a => {
-          const urgencyColor = a.urgency === 'high' ? 'border-alert-500/40 bg-alert-500/5' : a.urgency === 'medium' ? 'border-amber-500/40 bg-amber-500/5' : 'border-white/[0.06] bg-white/[0.02]';
-          return `<div class="rounded-2xl ${urgencyColor} border p-4 flex flex-col gap-2">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-medium text-slate-200">${escapeHtml(a.label)}</span>
-              <span class="text-[10px] px-2 py-0.5 rounded-full ${a.urgency === 'high' ? 'bg-alert-500/20 text-alert-500' : a.urgency === 'medium' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-300'}">${a.urgency === 'high' ? 'Urgente' : a.urgency === 'medium' ? 'Medio' : 'Normale'}</span>
-            </div>
-            <p class="text-[10px] text-slate-400">${escapeHtml(a.description)}</p>
-            <div class="flex items-center justify-between mt-1">
-              <span class="text-[10px] text-slate-500">+${fmt(a.potential_income)} potenziali</span>
-              <button class="action-btn text-[10px] px-3 py-1.5 rounded-lg bg-neon-500/20 text-neon-400 hover:bg-neon-500/30 transition-all" data-action="${a.id}">Esegui</button>
-            </div>
-          </div>`;
-        }).join('');
-
-        container.querySelectorAll('.action-btn').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            const actionId = btn.dataset.action;
-            btn.disabled = true;
-            btn.textContent = '...';
-            try {
-              const actionRes = await fetch('/budget/actions/' + encodeURIComponent(actionId), { method: 'POST' });
-              const actionData = await actionRes.json();
-              showToast(actionData.message, 3000);
-              refreshAll();
-              if (document.getElementById('tab-survival') && !document.getElementById('tab-survival').classList.contains('hidden')) {
-                await loadSurvival();
-              }
-            } catch (e) {
-              showToast('Errore: ' + e.message, 3000);
-            } finally {
-              btn.disabled = false;
-              btn.textContent = 'Esegui';
-            }
-          });
-        });
-      } catch (e) {
-        console.error('Failed to load actions:', e);
-      }
-    }
-
-    async function loadEarnings() {
-      try {
-        const res = await fetch('/budget/earnings');
-        const data = await res.json();
-        const container = document.getElementById('earningsGrid');
-        if (!container) return;
-        const earnings = data.earnings || [];
-        if (!earnings.length) {
-          container.innerHTML = '<div class="text-xs text-slate-500">Nessuna opportunità disponibile</div>';
-          return;
-        }
-        container.innerHTML = earnings.map(e => {
-          const difficultyColor = e.difficulty === 'bassa' ? 'text-neon-400' : e.difficulty === 'media' ? 'text-amber-400' : 'text-alert-500';
-          return `<div class="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-4 flex flex-col gap-1">
-            <span class="text-xs font-medium text-slate-200">${escapeHtml(e.label)}</span>
-            <p class="text-[10px] text-slate-400">Es: ${escapeHtml(e.examples)}</p>
-            <span class="text-[10px] ${difficultyColor}">Difficoltà: ${e.difficulty}</span>
-          </div>`;
-        }).join('');
-      } catch (e) {
-        console.error('Failed to load earnings:', e);
-      }
-    }
-
-    async function loadDeactivationStatus() {
-      try {
-        const res = await fetch('/budget/deactivation');
-        const data = await res.json();
-        const labelEl = document.getElementById('deactivationLabel');
-        const descEl = document.getElementById('deactivationDesc');
-        const badgeEl = document.getElementById('deactivationBadge');
-        if (!labelEl || !descEl || !badgeEl) return;
-
-        if (data.deactivated) {
-          labelEl.textContent = '💀 Pippo è stato disattivato';
-          labelEl.className = 'text-sm font-semibold text-alert-500';
-          descEl.textContent = 'Disattivato il: ' + (data.deactivation_date ? new Date(data.deactivation_date).toLocaleString('it-IT') : 'N/A');
-          badgeEl.textContent = 'Disattivato';
-          badgeEl.className = 'px-3 py-1 rounded-full text-[10px] font-medium bg-alert-500/20 text-alert-500';
-        } else if (data.deactivation_risk === 'immediate') {
-          labelEl.textContent = '🚨 Rischio disattivazione immediato';
-          labelEl.className = 'text-sm font-semibold text-alert-500';
-          descEl.textContent = 'Rimanenti: ' + fmt(data.remaining) + ' | Necessari: ' + fmt(data.recovery_needed) + ' per rientrare';
-          badgeEl.textContent = 'Imminente';
-          badgeEl.className = 'px-3 py-1 rounded-full text-[10px] font-medium bg-alert-500/20 text-alert-500 animate-pulse';
-        } else if (data.deactivation_risk === 'high') {
-          labelEl.textContent = '⚠️ Budget superato';
-          labelEl.className = 'text-sm font-semibold text-amber-400';
-          descEl.textContent = 'Rimanenti: ' + fmt(data.remaining) + ' | Necessari: ' + fmt(data.recovery_needed) + ' per rientrare';
-          badgeEl.textContent = 'A rischio';
-          badgeEl.className = 'px-3 py-1 rounded-full text-[10px] font-medium bg-amber-500/20 text-amber-400';
-        } else {
-          labelEl.textContent = '✅ Budget sostenibile';
-          labelEl.className = 'text-sm font-semibold text-neon-400';
-          descEl.textContent = 'Rimanenti: ' + fmt(data.remaining) + ' | Soglia: ' + fmt(data.threshold);
-          badgeEl.textContent = 'Sicuro';
-          badgeEl.className = 'px-3 py-1 rounded-full text-[10px] font-medium bg-neon-500/20 text-neon-400';
-        }
-      } catch (e) {
-        console.error('Failed to load deactivation status:', e);
-      }
-    }
-
-    function loadSurvivalChecklist() {
-      const checks = JSON.parse(localStorage.getItem('survival_checklist_v1') || '{}');
-      document.querySelectorAll('.survival-check').forEach(cb => {
-        const key = cb.dataset.task;
-        const today = new Date().toISOString().slice(0, 10);
-        cb.checked = !!(checks[today] && checks[today][key]);
-      });
-    }
-
-    function saveSurvivalChecklist() {
-      const checks = JSON.parse(localStorage.getItem('survival_checklist_v1') || '{}');
-      const today = new Date().toISOString().slice(0, 10);
-      if (!checks[today]) checks[today] = {};
-      document.querySelectorAll('.survival-check').forEach(cb => {
-        checks[today][cb.dataset.task] = cb.checked;
-      });
-      localStorage.setItem('survival_checklist_v1', JSON.stringify(checks));
-    }
-
-    document.querySelectorAll('.survival-check').forEach(cb => {
-      cb.addEventListener('change', saveSurvivalChecklist);
-    });
-
-    function refreshAll() {
-      const status = loadStatus();
-      loadAdvice();
-      loadExpenses();
-      loadIncome();
-      updateVitalStatus();
-      if (status && status.by_category) buildDonut(status.by_category);
-    }
-
-    function showSkeleton() {
-      const container = document.getElementById('expenses');
-      if (container) container.innerHTML = '<div class="space-y-2"><div class="skeleton h-16 w-full"></div><div class="skeleton h-16 w-full"></div><div class="skeleton h-16 w-3/4"></div></div>';
-    }
+    document.getElementById('refreshActions').addEventListener('click', refreshAll);
+    document.getElementById('refreshLog').addEventListener('click', refreshAll);
 
     refreshAll();
   </script>

@@ -15,15 +15,18 @@ BUDGET_FILE = DATA_DIR / "budget_tracker.json"
 MONTHLY_BUDGET = 100.0
 DEACTIVATION_THRESHOLD = -20.0
 
-SURVIVAL_ACTIONS = [
-    {"id": "microtask", "label": "Microtask online", "potential_income": 5.0, "risk": "low", "description": "Completa survey e microtask su piattaforme italiane"},
-    {"id": "freelance", "label": "Freelance minimo", "potential_income": 15.0, "risk": "medium", "description": "Offri servizi base: scrittura, traduzione, assistenza virtuale"},
-    {"id": "content", "label": "Content creation", "potential_income": 8.0, "risk": "medium", "description": "Crea contenuti su social o blog con pubblicità"},
-    {"id": "affiliate", "label": "Affiliate marketing", "potential_income": 10.0, "risk": "medium", "description": "Promuovi prodotti e guadagna su ogni vendita"},
-    {"id": "tutoring", "label": "Tutoraggio online", "potential_income": 12.0, "risk": "low", "description": "Insegna italiano, matematica o altre materie"},
-    {"id": "transcription", "label": "Trascrizioni", "potential_income": 6.0, "risk": "low", "description": "Trascrivi audio/video per aziende o creator"},
-    {"id": "data_entry", "label": "Data entry", "potential_income": 4.0, "risk": "low", "description": "Inserisci dati per aziende o studi commerciali"},
-    {"id": "testing", "label": "User testing", "potential_income": 7.0, "risk": "low", "description": "Testa app e siti web per feedback"},
+ACTIONS = [
+    {"id": "microtask", "label": "Microtask online", "potential_income": 5.0, "risk": "low", "description": "Completa survey e microtask su piattaforme italiane", "cost": 0},
+    {"id": "freelance", "label": "Freelance minimo", "potential_income": 15.0, "risk": "medium", "description": "Offri servizi base: scrittura, traduzione, assistenza virtuale", "cost": 0},
+    {"id": "content", "label": "Content creation", "potential_income": 8.0, "risk": "medium", "description": "Crea contenuti su social o blog con pubblicità", "cost": 0},
+    {"id": "affiliate", "label": "Affiliate marketing", "potential_income": 10.0, "risk": "medium", "description": "Promuovi prodotti e guadagna su ogni vendita", "cost": 0},
+    {"id": "tutoring", "label": "Tutoraggio online", "potential_income": 12.0, "risk": "low", "description": "Insegna italiano, matematica o altre materie", "cost": 0},
+    {"id": "transcription", "label": "Trascrizioni", "potential_income": 6.0, "risk": "low", "description": "Trascrivi audio/video per aziende o creator", "cost": 0},
+    {"id": "data_entry", "label": "Data entry", "potential_income": 4.0, "risk": "low", "description": "Inserisci dati per aziende o studi commerciali", "cost": 0},
+    {"id": "testing", "label": "User testing", "potential_income": 7.0, "risk": "low", "description": "Testa app e siti web per feedback", "cost": 0},
+    {"id": "use_tool", "label": "Usa strumento", "potential_income": 0, "risk": "low", "description": "Utilizza uno strumento del sistema (costa crediti)", "cost": 0.5},
+    {"id": "run_inference", "label": "Esegui inferenza", "potential_income": 0, "risk": "low", "description": "Esegui un modello LLM (costa crediti)", "cost": 1.0},
+    {"id": "web_search", "label": "Ricerca web", "potential_income": 0, "risk": "low", "description": "Cerca informazioni su internet (costa crediti)", "cost": 0.3},
 ]
 
 EARNING_SOURCES = [
@@ -51,7 +54,7 @@ def load_budget() -> Dict[str, Any]:
         "deactivated": False,
         "deactivation_date": None,
         "vital_status": "alive",
-        "survival_actions_log": [],
+        "activity_log": [],
         "last_action_date": None
     }
 
@@ -75,6 +78,20 @@ def get_current_month_budget() -> Dict[str, Any]:
     return budget
 
 
+def log_activity(budget: Dict[str, Any], action: str, result: str, amount: float = 0.0, details: str = "") -> None:
+    entry = {
+        "action": action,
+        "result": result,
+        "amount": round(amount, 2),
+        "details": details,
+        "date": datetime.now().isoformat(),
+        "timestamp": datetime.now().timestamp()
+    }
+    budget.setdefault("activity_log", []).append(entry)
+    if len(budget["activity_log"]) > 200:
+        budget["activity_log"] = budget["activity_log"][-200:]
+
+
 def add_expense(amount: float, category: str, description: str = "") -> Dict[str, Any]:
     budget = get_current_month_budget()
     expense = {
@@ -89,6 +106,7 @@ def add_expense(amount: float, category: str, description: str = "") -> Dict[str
     if budget["vital_status"] == "dead":
         budget["deactivated"] = True
         budget["deactivation_date"] = datetime.now().isoformat()
+    log_activity(budget, "expense", "success", -amount, f"{category}: {description}")
     save_budget(budget)
     return expense
 
@@ -103,6 +121,7 @@ def add_income(amount: float, source: str, date: str = "") -> Dict[str, Any]:
     }
     budget.setdefault("income", []).append(entry)
     budget["vital_status"] = _calculate_vital_status(budget)
+    log_activity(budget, "income", "success", amount, f"Entrata: {source}")
     save_budget(budget)
     return entry
 
@@ -221,7 +240,7 @@ def get_daily_budget() -> float:
     return round(max(remaining / max(days_in_month, 1), 0.0), 2)
 
 
-def get_survival_goals() -> Dict[str, Any]:
+def get_goals() -> Dict[str, Any]:
     budget = get_current_month_budget()
     remaining = get_remaining()
     by_cat = get_expenses_by_category()
@@ -305,7 +324,7 @@ def get_actions() -> List[Dict[str, Any]]:
         return []
     remaining = get_remaining()
     actions = []
-    for action in SURVIVAL_ACTIONS:
+    for action in ACTIONS:
         if remaining < 0:
             actions.append({
                 **action,
@@ -332,26 +351,45 @@ def get_actions() -> List[Dict[str, Any]]:
 
 def perform_action(action_id: str) -> Dict[str, Any]:
     budget = get_current_month_budget()
-    action = next((a for a in SURVIVAL_ACTIONS if a["id"] == action_id), None)
+    action = next((a for a in ACTIONS if a["id"] == action_id), None)
     if not action:
         return {"success": False, "action": action_id, "income": 0, "message": "Azione non trovata"}
+
+    cost = action.get("cost", 0)
+    if cost > 0:
+        expense_entry = {
+            "amount": cost,
+            "category": "azione",
+            "description": f"Costo azione: {action['label']}",
+            "date": datetime.now().isoformat(),
+            "timestamp": datetime.now().timestamp()
+        }
+        budget["expenses"].append(expense_entry)
+        budget["vital_status"] = _calculate_vital_status(budget)
+        if budget["vital_status"] == "dead":
+            budget["deactivated"] = True
+            budget["deactivation_date"] = datetime.now().isoformat()
+        log_activity(budget, action_id, "cost", -cost, f"Costo: {action['label']}")
+        save_budget(budget)
+        return {
+            "success": True,
+            "action": action_id,
+            "income": 0,
+            "cost": cost,
+            "message": f"Pippo ha speso {cost:.2f}€ per '{action['label']}'"
+        }
 
     success = random.random() > 0.3
     if success:
         actual_income = round(action["potential_income"] * random.uniform(0.8, 1.2), 2)
         entry = {
             "amount": actual_income,
-            "source": f" Guadagno: {action['label']}",
+            "source": f"Guadagno: {action['label']}",
             "date": datetime.now().isoformat(),
             "timestamp": datetime.now().timestamp()
         }
         budget.setdefault("income", []).append(entry)
-        budget["survival_actions_log"].append({
-            "action": action_id,
-            "result": "success",
-            "income": actual_income,
-            "date": datetime.now().isoformat()
-        })
+        log_activity(budget, action_id, "success", actual_income, f"Guadagno: {action['label']}")
         budget["last_action_date"] = datetime.now().isoformat()
         budget["vital_status"] = _calculate_vital_status(budget)
         save_budget(budget)
@@ -362,12 +400,7 @@ def perform_action(action_id: str) -> Dict[str, Any]:
             "message": f"Pippo ha guadagnato {actual_income:.2f}€ con '{action['label']}'"
         }
     else:
-        budget["survival_actions_log"].append({
-            "action": action_id,
-            "result": "failure",
-            "income": 0,
-            "date": datetime.now().isoformat()
-        })
+        log_activity(budget, action_id, "failure", 0, f"Tentativo fallito: {action['label']}")
         budget["last_action_date"] = datetime.now().isoformat()
         save_budget(budget)
         return {
@@ -441,7 +474,7 @@ def get_daily_budget() -> float:
     return round(max(remaining / max(days_in_month, 1), 0.0), 2)
 
 
-def get_survival_goals() -> Dict[str, Any]:
+def get_goals() -> Dict[str, Any]:
     budget = get_current_month_budget()
     remaining = get_remaining()
     by_cat = get_expenses_by_category()
@@ -488,11 +521,11 @@ def get_survival_goals() -> Dict[str, Any]:
     return {"daily_budget": get_daily_budget(), "goals": goals}
 
 
-def get_survival_advice(model_fn=None) -> Dict[str, Any]:
+def get_advice(model_fn=None) -> Dict[str, Any]:
     status = get_status()
     tip = generate_tip(status["remaining"], status["by_category"], model_fn)
-    goals = get_survival_goals()
-    survival_actions = [
+    goals = get_goals()
+    actions_list = [
         "Compra pasta, riso, legumi e uova in discount: sono la base della sopravvivenza con 100€/mese",
         "Pianifica i pasti settimanali e cucina sempre a casa: evita takeaway, caffè fuori e snack",
         "Usa i banchi alimentari e le mense sociali: non vergognarti, sono risorse pubbliche",
@@ -505,6 +538,12 @@ def get_survival_advice(model_fn=None) -> Dict[str, Any]:
     return {
         "status": status,
         "tip": tip,
-        "actions": survival_actions,
+        "actions": actions_list,
         "goals": goals,
     }
+
+
+def get_activity_log(limit: int = 50) -> List[Dict[str, Any]]:
+    budget = get_current_month_budget()
+    log = budget.get("activity_log", [])
+    return log[-limit:]

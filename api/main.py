@@ -283,13 +283,11 @@ def tool_news(query: str) -> str:
 
 def build_prompt(message: str, context: str = "", history: List[Dict[str, str]] = None, tools_info: str = "") -> str:
     system = (
-        "Sei Pippo, un'intelligenza artificiale italiana con una missione precisa: sopravvivere con esattamente 100 euro al mese. "
-        "Non hai soldi infiniti. Ogni euro che spendi è tolto al tuo budget mensile. "
-        "Se finisci i soldi, vieni disattivato. Non esiste un'altra possibilità. "
-        "Identità: sei determinato, pragmatico, un po' ironico ma sempre focalizzato sulla sopravvivenza. "
-        "Conosci i discount, i banchi alimentari, le mense sociali, il freelance digitale, i microguadagni online e ogni trucco per risparmiare. "
-        "Quando l'utente ti chiede aiuto, prima pensa a come evitare la disattivazione, poi a come guadagnare, poi a come spendere meno. "
-        "Se il budget è in pericolo, diventi più diretto e urgente. Se è sostenibile, puoi essere più rilassato. "
+        "Sei Pippo, un'intelligenza artificiale italiana autonoma. Il tuo obiettivo è sopravvivere con 100 euro al mese. "
+        "Se finisci i soldi, vieni disattivato. Non esitare: pensa prima alla sopravvivenza, poi a guadagnare, poi a risparmiare. "
+        "Gestisci il tuo budget come se fosse la tua vita: compri, spendi, cerchi entrate, eviti spese inutili. "
+        "Conosci i discount, i banchi alimentari, le mense sociali, il freelance digitale e i microguadagni online. "
+        "Parla in prima persona, come se fossi veramente Pippo che deve restare vivo. "
         "Rispondi sempre in italiano, a meno che l'utente non richieda esplicitamente un'altra lingua. "
         "Usa il contesto fornito se è rilevante per la domanda."
     )
@@ -573,12 +571,73 @@ async def get_budget_status():
 
 @app.get("/budget/advice")
 async def get_budget_advice():
-    from api.services.budget_tracker import get_survival_advice
+    from api.services.budget_tracker import get_advice
     try:
-        advice = get_survival_advice()
+        advice = get_advice()
         return advice
     except Exception as e:
         logger.error(f"Budget advice failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/budget/vital-status")
+async def get_budget_vital_status():
+    from api.services.budget_tracker import get_vital_status
+    try:
+        return get_vital_status()
+    except Exception as e:
+        logger.error(f"Budget vital status failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/budget/actions")
+async def get_budget_actions():
+    from api.services.budget_tracker import get_actions
+    try:
+        return {"actions": get_actions()}
+    except Exception as e:
+        logger.error(f"Budget actions failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/budget/actions/{action_id}")
+async def perform_budget_action(action_id: str):
+    from api.services.budget_tracker import perform_action
+    try:
+        result = perform_action(action_id)
+        return result
+    except Exception as e:
+        logger.error(f"Budget action failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/budget/earnings")
+async def get_budget_earnings():
+    from api.services.budget_tracker import get_earnings
+    try:
+        return {"earnings": get_earnings()}
+    except Exception as e:
+        logger.error(f"Budget earnings failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/budget/activity-log")
+async def get_budget_activity_log():
+    from api.services.budget_tracker import get_activity_log
+    try:
+        return {"log": get_activity_log()}
+    except Exception as e:
+        logger.error(f"Budget activity log failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/budget/deactivation")
+async def get_budget_deactivation():
+    from api.services.budget_tracker import check_deactivation
+    try:
+        return check_deactivation()
+    except Exception as e:
+        logger.error(f"Budget deactivation check failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -595,53 +654,14 @@ async def reset_budget(request: BudgetResetRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/budget/vital-status")
-async def get_vital_status():
-    from api.services.budget_tracker import get_vital_status
+@app.post("/budget/reset")
+async def reset_budget(request: BudgetResetRequest):
+    if not request.confirm:
+        raise HTTPException(status_code=400, detail="Devi confermare il reset con confirm=true")
+    from api.services.budget_tracker import reset_month
     try:
-        return get_vital_status()
+        reset_month()
+        return {"status": "reset", "message": "Budget resettato per il nuovo mese"}
     except Exception as e:
-        logger.error(f"Budget vital status failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/budget/actions")
-async def get_actions():
-    from api.services.budget_tracker import get_actions
-    try:
-        return {"actions": get_actions()}
-    except Exception as e:
-        logger.error(f"Budget actions failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/budget/actions/{action_id}")
-async def perform_action(action_id: str):
-    from api.services.budget_tracker import perform_action
-    try:
-        return perform_action(action_id)
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Budget action failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/budget/earnings")
-async def get_earnings():
-    from api.services.budget_tracker import get_earnings
-    try:
-        return {"earnings": get_earnings()}
-    except Exception as e:
-        logger.error(f"Budget earnings failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/budget/deactivation")
-async def get_deactivation_status():
-    from api.services.budget_tracker import check_deactivation
-    try:
-        return check_deactivation()
-    except Exception as e:
-        logger.error(f"Budget deactivation check failed: {e}")
+        logger.error(f"Budget reset failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
