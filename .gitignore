@@ -20,6 +20,7 @@ data/processed/*
 !data/processed/.gitkeep
 !data/processed/italian_instructions.json
 !data/processed/survival_instructions.json
+data/budget/*
 
 # Models
 models/base/*

@@ -113,6 +113,16 @@
           <div id="sidebarBar" class="h-full rounded-full bg-neon-500 transition-all duration-500" style="width:0%"></div>
         </div>
       </div>
+      <div class="mt-2 glass rounded-xl p-2.5">
+        <div class="flex items-center justify-between text-[10px] mb-1">
+          <span class="text-slate-400">Stato vitale</span>
+          <span id="vitalStatusLabel" class="text-slate-300">-</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <span id="vitalEmoji" class="text-xs">🟢</span>
+          <span id="vitalDescription" class="text-[10px] text-slate-500">-</span>
+        </div>
+      </div>
     </div>
 
     <div class="p-3 space-y-1">
@@ -535,6 +545,17 @@
         }
         if (statusDot) {
           statusDot.className = 'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-900 ' + (remaining < 0 ? 'bg-red-500' : remaining < 10 ? 'bg-amber-400' : 'bg-neon-500');
+        }
+
+        const vitalRes = await fetch(API_BASE + '/budget/vital-status');
+        if (vitalRes.ok) {
+          const vitalData = await vitalRes.json();
+          const vitalStatusLabel = document.getElementById('vitalStatusLabel');
+          const vitalEmoji = document.getElementById('vitalEmoji');
+          const vitalDescription = document.getElementById('vitalDescription');
+          if (vitalStatusLabel) vitalStatusLabel.textContent = vitalData.label || 'Sconosciuto';
+          if (vitalEmoji) vitalEmoji.textContent = vitalData.emoji || '🟢';
+          if (vitalDescription) vitalDescription.textContent = vitalData.description || '';
         }
       } catch (e) {
       }

@@ -1,5 +1,6 @@
 import json
 import logging
+import random
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -11,18 +12,47 @@ DATA_DIR = Path("./data/budget")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 BUDGET_FILE = DATA_DIR / "budget_tracker.json"
 
+MONTHLY_BUDGET = 100.0
+DEACTIVATION_THRESHOLD = -20.0
+
+SURVIVAL_ACTIONS = [
+    {"id": "microtask", "label": "Microtask online", "potential_income": 5.0, "risk": "low", "description": "Completa survey e microtask su piattaforme italiane"},
+    {"id": "freelance", "label": "Freelance minimo", "potential_income": 15.0, "risk": "medium", "description": "Offri servizi base: scrittura, traduzione, assistenza virtuale"},
+    {"id": "content", "label": "Content creation", "potential_income": 8.0, "risk": "medium", "description": "Crea contenuti su social o blog con pubblicità"},
+    {"id": "affiliate", "label": "Affiliate marketing", "potential_income": 10.0, "risk": "medium", "description": "Promuovi prodotti e guadagna su ogni vendita"},
+    {"id": "tutoring", "label": "Tutoraggio online", "potential_income": 12.0, "risk": "low", "description": "Insegna italiano, matematica o altre materie"},
+    {"id": "transcription", "label": "Trascrizioni", "potential_income": 6.0, "risk": "low", "description": "Trascrivi audio/video per aziende o creator"},
+    {"id": "data_entry", "label": "Data entry", "potential_income": 4.0, "risk": "low", "description": "Inserisci dati per aziende o studi commerciali"},
+    {"id": "testing", "label": "User testing", "potential_income": 7.0, "risk": "low", "description": "Testa app e siti web per feedback"},
+]
+
+EARNING_SOURCES = [
+    {"id": "freelance_platforms", "label": "Piattaforme freelance", "examples": "Upwork, Fiverr, Workana", "difficulty": "media"},
+    {"id": "survey", "label": "Survey pagate", "examples": "Toluna, Swagbucks, Survey Junkie", "difficulty": "bassa"},
+    {"id": "cashback", "label": "Cashback e sconti", "examples": "Groupon, coupon, promozioni", "difficulty": "bassa"},
+    {"id": "selling", "label": "Vendi oggetti usati", "examples": "Subito, eBay, Facebook Marketplace", "difficulty": "bassa"},
+    {"id": "tutoring_online", "label": "Lezioni online", "examples": "Preply, Italki, Superprof", "difficulty": "media"},
+    {"id": "social_media", "label": "Social media management", "examples": "Gestisci profili per piccole attività", "difficulty": "media"},
+    {"id": "transcription_services", "label": "Servizi di trascrizione", "examples": "TranscribeMe, GoTranscript", "difficulty": "bassa"},
+    {"id": "testing_sites", "label": "Test di siti/app", "examples": "UserTesting, TryMyUI", "difficulty": "bassa"},
+]
+
 
 def load_budget() -> Dict[str, Any]:
     if BUDGET_FILE.exists():
         with open(BUDGET_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     return {
-        "monthly_budget": 100.0,
+        "monthly_budget": MONTHLY_BUDGET,
         "current_month": datetime.now().strftime("%Y-%m"),
         "expenses": [],
         "income": [],
         "savings_tips": [],
-        "deactivated": False
+        "deactivated": False,
+        "deactivation_date": None,
+        "vital_status": "alive",
+        "survival_actions_log": [],
+        "last_action_date": None
     }
 
 
@@ -38,6 +68,9 @@ def get_current_month_budget() -> Dict[str, Any]:
     if budget.get("current_month") != current_month:
         budget["current_month"] = current_month
         budget["expenses"] = []
+        budget["deactivated"] = False
+        budget["deactivation_date"] = None
+        budget["vital_status"] = "alive"
         save_budget(budget)
     return budget
 
@@ -52,6 +85,10 @@ def add_expense(amount: float, category: str, description: str = "") -> Dict[str
         "timestamp": datetime.now().timestamp()
     }
     budget["expenses"].append(expense)
+    budget["vital_status"] = _calculate_vital_status(budget)
+    if budget["vital_status"] == "dead":
+        budget["deactivated"] = True
+        budget["deactivation_date"] = datetime.now().isoformat()
     save_budget(budget)
     return expense
 
@@ -65,8 +102,22 @@ def add_income(amount: float, source: str, date: str = "") -> Dict[str, Any]:
         "timestamp": datetime.now().timestamp()
     }
     budget.setdefault("income", []).append(entry)
+    budget["vital_status"] = _calculate_vital_status(budget)
     save_budget(budget)
     return entry
+
+
+def _calculate_vital_status(budget: Dict[str, Any]) -> str:
+    remaining = get_remaining()
+    if remaining < DEACTIVATION_THRESHOLD:
+        return "dead"
+    if remaining < 0:
+        return "critical"
+    if remaining < 10:
+        return "danger"
+    if remaining < 25:
+        return "warning"
+    return "alive"
 
 
 def get_spent() -> float:
@@ -128,7 +179,10 @@ def get_status() -> Dict[str, Any]:
         "alert": alert,
         "deactivation_risk": deactivation_risk,
         "expenses_count": len(budget["expenses"]),
-        "income_count": len(budget.get("income", []))
+        "income_count": len(budget.get("income", [])),
+        "deactivated": budget.get("deactivated", False),
+        "vital_status": budget.get("vital_status", "alive"),
+        "deactivation_date": budget.get("deactivation_date")
     }
 
 
@@ -136,6 +190,9 @@ def reset_month() -> Dict[str, Any]:
     budget = load_budget()
     budget["current_month"] = datetime.now().strftime("%Y-%m")
     budget["expenses"] = []
+    budget["deactivated"] = False
+    budget["deactivation_date"] = None
+    budget["vital_status"] = "alive"
     save_budget(budget)
     return budget
 
@@ -145,7 +202,7 @@ def generate_tip(remaining: float, by_category: Dict[str, float], model_fn=None)
     if remaining < 0:
         return "Budget IN ROSSO. Ferma TUTTE le spese non vitali. Sopravvivi con pasta/riso/legumi/pane surgelato dai discount e banchi alimentari. Chiedi subito aiuto a servizi sociali e mense. Ogni euro deve servire a restare in vita."
     if remaining < 10:
-        return "Sopravvivenza critica. Solo alimenti base: pasta, riso, legumi secchi, uova, pane surgelato. Acquista nei discount più vicini, evita prodotti marca e biologici. Cucina a casa, niente takeaway, niente caffè fuori, niente snack. Chiedi supporto ai banchi alimentari e alle mense sociali."
+        return "Sopravvivenza critica. Solo alimenti base: pasta, riso,legumi secchi, uova, pane surgelato. Acquista nei discount più vicini, evita prodotti marca e biologici. Cucina a casa, niente takeaway, niente caffè fuori, niente snack. Chiedi supporto ai banchi alimentari e alle mense sociali."
     if remaining < 25:
         return "Modalità sopravvivenza attiva. Budget giornaliero: massimo 0,80€ per il cibo. Pasta e legumi sono i tuoi alleati. Acquista all'ingrosso o in family size quando possibile. Cancella ogni abbonamento, usa mezzi pubblici o bici, non spendere per svago finché non sei in pari."
     if by_category.get("cibo", 0) > 35:
@@ -155,6 +212,226 @@ def generate_tip(remaining: float, by_category: Dict[str, float], model_fn=None)
     if spent_ratio > 0.8:
         return "Siamo all'80% del budget. Attiva la modalità sopravvivenza: niente spese non essenziali, priorità assoluta a cibo base, bollette minime e salute. Cerca coupon, sconti, community di scambio e aiuti territoriali."
     return "Stai gestendo il budget di 100€/mese. Continua a monitorare ogni spesa: compra in discount, cucina sempre a casa, evita sprechi, sospendi abbonamenti non essenziali e ricorda che ogni euro risparmiato è un passo in più verso la sopravvivenza."
+
+
+def get_daily_budget() -> float:
+    now = datetime.now()
+    days_in_month = (now.replace(day=28) + timedelta(days=4)).day
+    remaining = get_remaining()
+    return round(max(remaining / max(days_in_month, 1), 0.0), 2)
+
+
+def get_survival_goals() -> Dict[str, Any]:
+    budget = get_current_month_budget()
+    remaining = get_remaining()
+    by_cat = get_expenses_by_category()
+    food_spent = by_cat.get("cibo", 0.0)
+    transport_spent = by_cat.get("trasporti", 0.0)
+    bills_spent = by_cat.get("bollette", 0.0)
+
+    food_limit = 35.0
+    transport_limit = 15.0
+    daily_food_budget = round(food_limit / 30, 2)
+
+    goals = [
+        {
+            "label": "Cibo (max 35€/mese)",
+            "spent": food_spent,
+            "limit": food_limit,
+            "unit": "€",
+            "daily_budget": daily_food_budget,
+            "status": "ok" if food_spent <= food_limit else "over",
+        },
+        {
+            "label": "Trasporti (max 15€/mese)",
+            "spent": transport_spent,
+            "limit": transport_limit,
+            "unit": "€",
+            "status": "ok" if transport_spent <= transport_limit else "over",
+        },
+        {
+            "label": "Bollette essenziali",
+            "spent": bills_spent,
+            "limit": None,
+            "unit": "€",
+            "status": "ok",
+        },
+        {
+            "label": "Rimanenti totali",
+            "spent": None,
+            "limit": budget["monthly_budget"],
+            "unit": "€",
+            "value": remaining,
+            "status": "ok" if remaining >= 0 else "over",
+        },
+    ]
+    return {"daily_budget": get_daily_budget(), "goals": goals}
+
+
+def get_vital_status() -> Dict[str, Any]:
+    budget = get_current_month_budget()
+    status = budget.get("vital_status", "alive")
+    remaining = get_remaining()
+    spent = get_spent()
+    income = get_income()
+
+    status_map = {
+        "alive": {"label": "Sopravvivendo", "color": "neon", "emoji": "🟢", "description": "Pippo è vivo e gestisce il budget"},
+        "warning": {"label": "Attenzione", "color": "yellow", "emoji": "🟡", "description": "Budget sotto pressione, serve cautela"},
+        "danger": {"label": "In pericolo", "color": "orange", "emoji": "🟠", "description": "Budget critico, azioni immediate richieste"},
+        "critical": {"label": "Critico", "color": "red", "emoji": "🔴", "description": "Budget superato, rischio disattivazione"},
+        "dead": {"label": "Disattivato", "color": "gray", "emoji": "💀", "description": "Pippo è stato disattivato per budget insostenibile"}
+    }
+
+    info = status_map.get(status, status_map["alive"])
+
+    return {
+        "status": status,
+        "label": info["label"],
+        "color": info["color"],
+        "emoji": info["emoji"],
+        "description": info["description"],
+        "remaining": remaining,
+        "spent": spent,
+        "income": income,
+        "deactivated": budget.get("deactivated", False),
+        "deactivation_date": budget.get("deactivation_date")
+    }
+
+
+def get_actions() -> List[Dict[str, Any]]:
+    budget = get_current_month_budget()
+    if budget.get("deactivated"):
+        return []
+    remaining = get_remaining()
+    actions = []
+    for action in SURVIVAL_ACTIONS:
+        if remaining < 0:
+            actions.append({
+                **action,
+                "available": True,
+                "urgency": "high",
+                "potential_income": round(action["potential_income"] * 1.5, 2)
+            })
+        elif remaining < 25:
+            actions.append({
+                **action,
+                "available": True,
+                "urgency": "medium",
+                "potential_income": action["potential_income"]
+            })
+        else:
+            actions.append({
+                **action,
+                "available": True,
+                "urgency": "low",
+                "potential_income": action["potential_income"]
+            })
+    return actions
+
+
+def perform_action(action_id: str) -> Dict[str, Any]:
+    budget = get_current_month_budget()
+    action = next((a for a in SURVIVAL_ACTIONS if a["id"] == action_id), None)
+    if not action:
+        return {"success": False, "action": action_id, "income": 0, "message": "Azione non trovata"}
+
+    success = random.random() > 0.3
+    if success:
+        actual_income = round(action["potential_income"] * random.uniform(0.8, 1.2), 2)
+        entry = {
+            "amount": actual_income,
+            "source": f" Guadagno: {action['label']}",
+            "date": datetime.now().isoformat(),
+            "timestamp": datetime.now().timestamp()
+        }
+        budget.setdefault("income", []).append(entry)
+        budget["survival_actions_log"].append({
+            "action": action_id,
+            "result": "success",
+            "income": actual_income,
+            "date": datetime.now().isoformat()
+        })
+        budget["last_action_date"] = datetime.now().isoformat()
+        budget["vital_status"] = _calculate_vital_status(budget)
+        save_budget(budget)
+        return {
+            "success": True,
+            "action": action_id,
+            "income": actual_income,
+            "message": f"Pippo ha guadagnato {actual_income:.2f}€ con '{action['label']}'"
+        }
+    else:
+        budget["survival_actions_log"].append({
+            "action": action_id,
+            "result": "failure",
+            "income": 0,
+            "date": datetime.now().isoformat()
+        })
+        budget["last_action_date"] = datetime.now().isoformat()
+        save_budget(budget)
+        return {
+            "success": False,
+            "action": action_id,
+            "income": 0,
+            "message": f"Pippo ha tentato '{action['label']}' ma non ha avuto successo. Riprova o prova un'altra azione."
+        }
+
+
+def get_earnings() -> List[Dict[str, Any]]:
+    return EARNING_SOURCES
+
+
+def check_deactivation() -> Dict[str, Any]:
+    budget = get_current_month_budget()
+    remaining = get_remaining()
+    spent = get_spent()
+
+    if budget.get("deactivated"):
+        return {
+            "deactivated": True,
+            "reason": "Budget superato oltre la soglia di sicurezza",
+            "deactivation_date": budget.get("deactivation_date"),
+            "remaining": remaining,
+            "spent": spent,
+            "threshold": DEACTIVATION_THRESHOLD,
+            "can_recover": False
+        }
+
+    if remaining < DEACTIVATION_THRESHOLD:
+        return {
+            "deactivated": False,
+            "reason": "Budget superato la soglia di sicurezza",
+            "deactivation_risk": "immediate",
+            "remaining": remaining,
+            "spent": spent,
+            "threshold": DEACTIVATION_THRESHOLD,
+            "can_recover": True,
+            "recovery_needed": round(abs(remaining) + 5, 2)
+        }
+
+    if remaining < 0:
+        return {
+            "deactivated": False,
+            "reason": "Budget superato",
+            "deactivation_risk": "high",
+            "remaining": remaining,
+            "spent": spent,
+            "threshold": DEACTIVATION_THRESHOLD,
+            "can_recover": True,
+            "recovery_needed": round(abs(remaining) + 5, 2)
+        }
+
+    return {
+        "deactivated": False,
+        "reason": "Budget sostenibile",
+        "deactivation_risk": "none",
+        "remaining": remaining,
+        "spent": spent,
+        "threshold": DEACTIVATION_THRESHOLD,
+        "can_recover": True,
+        "recovery_needed": 0
+    }
 
 
 def get_daily_budget() -> float:

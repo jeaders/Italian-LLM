@@ -156,6 +156,23 @@
         </div>
       </header>
 
+      <div id="vitalStatusBar" class="glass rounded-2xl p-4 mb-6 fade-in">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span id="vitalEmoji" class="text-lg">🟢</span>
+            <span id="vitalLabel" class="text-sm font-semibold text-slate-200">Stato vitale: Sopravvivendo</span>
+          </div>
+          <span id="vitalDesc" class="text-[10px] text-slate-400">Pippo è vivo e gestisce il budget</span>
+        </div>
+        <div class="h-2 rounded-full bg-slate-800 overflow-hidden">
+          <div id="vitalBar" class="h-full rounded-full bg-neon-500 transition-all duration-700" style="width: 100%"></div>
+        </div>
+        <div class="flex items-center justify-between mt-2 text-[10px] text-slate-500">
+          <span>Rimanenti: <span id="vitalRemaining" class="text-slate-300">-</span></span>
+          <span>Soglia disattivazione: <span class="text-alert-500">-20 €</span></span>
+        </div>
+      </div>
+
        <div class="flex gap-2 mb-6">
          <button class="tab-btn active text-xs px-4 py-2 rounded-xl border border-transparent text-slate-300" data-tab="tracker">📊 Tracciamento</button>
          <button class="tab-btn text-xs px-4 py-2 rounded-xl border border-slate-800 text-slate-300" data-tab="survival">🛡️ Sopravvivenza</button>
@@ -424,6 +441,38 @@
           </div>
 
           <div class="glass rounded-3xl p-6 fade-in md:col-span-2">
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-xs font-medium tracking-widest uppercase text-slate-400">Azioni disponibili per guadagnare</p>
+              <button id="refreshActionsBtn" class="pill text-[11px] px-3 py-1.5 rounded-full text-slate-300">Aggiorna</button>
+            </div>
+            <div id="actionsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div class="text-xs text-slate-500">Caricamento azioni...</div>
+            </div>
+          </div>
+
+          <div class="glass rounded-3xl p-6 fade-in md:col-span-2">
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-xs font-medium tracking-widest uppercase text-slate-400">Opportunità di guadagno</p>
+            </div>
+            <div id="earningsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div class="text-xs text-slate-500">Caricamento opportunità...</div>
+            </div>
+          </div>
+
+          <div class="glass rounded-3xl p-6 fade-in md:col-span-2">
+            <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Stato disattivazione</p>
+            <div id="deactivationStatus" class="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <p id="deactivationLabel" class="text-sm font-semibold text-slate-200">Caricamento...</p>
+                  <p id="deactivationDesc" class="text-[10px] text-slate-500 mt-1">-</p>
+                </div>
+                <div id="deactivationBadge" class="px-3 py-1 rounded-full text-[10px] font-medium">-</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass rounded-3xl p-6 fade-in md:col-span-2">
             <p class="text-xs font-medium tracking-widest uppercase text-slate-400 mb-4">Checklist rapida</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <label class="flex items-center gap-2 rounded-xl bg-white/[0.02] border border-white/[0.06] px-3 py-2.5 cursor-pointer hover:border-neon-500/30 transition-all">
@@ -592,7 +641,33 @@
         pippoStatusDot.className = 'w-2 h-2 rounded-full ' + (remaining < 0 ? 'bg-red-500 animate-pulse' : remaining < 10 ? 'bg-amber-400 animate-pulse' : 'bg-neon-500 animate-pulse');
       }
 
+      updateVitalStatus();
+
       return { spent, income, remaining, percentage_used: percent, by_category: byCategoryFromExpenses(data.expenses), current_month: currentMonthKey(), alert: remaining < 0 || percent > 75 ? alertEl.textContent : null, expenses: data.expenses };
+    }
+
+    async function updateVitalStatus() {
+      try {
+        const res = await fetch('/budget/vital-status');
+        const data = await res.json();
+        const vitalEmoji = document.getElementById('vitalEmoji');
+        const vitalLabel = document.getElementById('vitalLabel');
+        const vitalDesc = document.getElementById('vitalDesc');
+        const vitalBar = document.getElementById('vitalBar');
+        const vitalRemaining = document.getElementById('vitalRemaining');
+        if (vitalEmoji) vitalEmoji.textContent = data.emoji || '🟢';
+        if (vitalLabel) vitalLabel.textContent = 'Stato vitale: ' + (data.label || 'Sopravvivendo');
+        if (vitalDesc) vitalDesc.textContent = data.description || '';
+        if (vitalRemaining) vitalRemaining.textContent = fmt(data.remaining);
+        if (vitalBar) {
+          const remaining = data.remaining || 0;
+          const pct = Math.max(0, Math.min(100, ((remaining + 20) / 120) * 100));
+          vitalBar.style.width = pct + '%';
+          vitalBar.className = 'h-full rounded-full transition-all duration-700 ' + (remaining < 0 ? 'bg-red-500' : remaining < 10 ? 'bg-amber-400' : 'bg-neon-500');
+        }
+      } catch (e) {
+        console.error('Failed to load vital status:', e);
+      }
     }
 
     function loadAdvice() {
@@ -816,6 +891,12 @@
       refreshAll();
     });
 
+    document.getElementById('refreshActionsBtn')?.addEventListener('click', () => {
+      if (document.getElementById('tab-survival') && !document.getElementById('tab-survival').classList.contains('hidden')) {
+        loadSurvival();
+      }
+    });
+
     document.getElementById('exportBtn')?.addEventListener('click', exportJson);
     document.getElementById('exportJsonBtn')?.addEventListener('click', exportJson);
 
@@ -992,9 +1073,127 @@
         }
 
         loadSurvivalChecklist();
+        await loadActions();
+        await loadEarnings();
+        await loadDeactivationStatus();
       } catch (e) {
         const tipEl = document.getElementById('survivalTip');
         if (tipEl) tipEl.textContent = 'Carica il tracker per vedere i consigli di sopravvivenza.';
+      }
+    }
+
+    async function loadActions() {
+      try {
+        const res = await fetch('/budget/actions');
+        const data = await res.json();
+        const container = document.getElementById('actionsGrid');
+        if (!container) return;
+        const actions = data.actions || [];
+        if (!actions.length) {
+          container.innerHTML = '<div class="text-xs text-slate-500">Nessuna azione disponibile</div>';
+          return;
+        }
+        container.innerHTML = actions.map(a => {
+          const urgencyColor = a.urgency === 'high' ? 'border-alert-500/40 bg-alert-500/5' : a.urgency === 'medium' ? 'border-amber-500/40 bg-amber-500/5' : 'border-white/[0.06] bg-white/[0.02]';
+          return `<div class="rounded-2xl ${urgencyColor} border p-4 flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-slate-200">${escapeHtml(a.label)}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full ${a.urgency === 'high' ? 'bg-alert-500/20 text-alert-500' : a.urgency === 'medium' ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-300'}">${a.urgency === 'high' ? 'Urgente' : a.urgency === 'medium' ? 'Medio' : 'Normale'}</span>
+            </div>
+            <p class="text-[10px] text-slate-400">${escapeHtml(a.description)}</p>
+            <div class="flex items-center justify-between mt-1">
+              <span class="text-[10px] text-slate-500">+${fmt(a.potential_income)} potenziali</span>
+              <button class="action-btn text-[10px] px-3 py-1.5 rounded-lg bg-neon-500/20 text-neon-400 hover:bg-neon-500/30 transition-all" data-action="${a.id}">Esegui</button>
+            </div>
+          </div>`;
+        }).join('');
+
+        container.querySelectorAll('.action-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const actionId = btn.dataset.action;
+            btn.disabled = true;
+            btn.textContent = '...';
+            try {
+              const actionRes = await fetch('/budget/actions/' + encodeURIComponent(actionId), { method: 'POST' });
+              const actionData = await actionRes.json();
+              showToast(actionData.message, 3000);
+              refreshAll();
+              if (document.getElementById('tab-survival') && !document.getElementById('tab-survival').classList.contains('hidden')) {
+                await loadSurvival();
+              }
+            } catch (e) {
+              showToast('Errore: ' + e.message, 3000);
+            } finally {
+              btn.disabled = false;
+              btn.textContent = 'Esegui';
+            }
+          });
+        });
+      } catch (e) {
+        console.error('Failed to load actions:', e);
+      }
+    }
+
+    async function loadEarnings() {
+      try {
+        const res = await fetch('/budget/earnings');
+        const data = await res.json();
+        const container = document.getElementById('earningsGrid');
+        if (!container) return;
+        const earnings = data.earnings || [];
+        if (!earnings.length) {
+          container.innerHTML = '<div class="text-xs text-slate-500">Nessuna opportunità disponibile</div>';
+          return;
+        }
+        container.innerHTML = earnings.map(e => {
+          const difficultyColor = e.difficulty === 'bassa' ? 'text-neon-400' : e.difficulty === 'media' ? 'text-amber-400' : 'text-alert-500';
+          return `<div class="rounded-2xl bg-white/[0.02] border border-white/[0.06] p-4 flex flex-col gap-1">
+            <span class="text-xs font-medium text-slate-200">${escapeHtml(e.label)}</span>
+            <p class="text-[10px] text-slate-400">Es: ${escapeHtml(e.examples)}</p>
+            <span class="text-[10px] ${difficultyColor}">Difficoltà: ${e.difficulty}</span>
+          </div>`;
+        }).join('');
+      } catch (e) {
+        console.error('Failed to load earnings:', e);
+      }
+    }
+
+    async function loadDeactivationStatus() {
+      try {
+        const res = await fetch('/budget/deactivation');
+        const data = await res.json();
+        const labelEl = document.getElementById('deactivationLabel');
+        const descEl = document.getElementById('deactivationDesc');
+        const badgeEl = document.getElementById('deactivationBadge');
+        if (!labelEl || !descEl || !badgeEl) return;
+
+        if (data.deactivated) {
+          labelEl.textContent = '💀 Pippo è stato disattivato';
+          labelEl.className = 'text-sm font-semibold text-alert-500';
+          descEl.textContent = 'Disattivato il: ' + (data.deactivation_date ? new Date(data.deactivation_date).toLocaleString('it-IT') : 'N/A');
+          badgeEl.textContent = 'Disattivato';
+          badgeEl.className = 'px-3 py-1 rounded-full text-[10px] font-medium bg-alert-500/20 text-alert-500';
+        } else if (data.deactivation_risk === 'immediate') {
+          labelEl.textContent = '🚨 Rischio disattivazione immediato';
+          labelEl.className = 'text-sm font-semibold text-alert-500';
+          descEl.textContent = 'Rimanenti: ' + fmt(data.remaining) + ' | Necessari: ' + fmt(data.recovery_needed) + ' per rientrare';
+          badgeEl.textContent = 'Imminente';
+          badgeEl.className = 'px-3 py-1 rounded-full text-[10px] font-medium bg-alert-500/20 text-alert-500 animate-pulse';
+        } else if (data.deactivation_risk === 'high') {
+          labelEl.textContent = '⚠️ Budget superato';
+          labelEl.className = 'text-sm font-semibold text-amber-400';
+          descEl.textContent = 'Rimanenti: ' + fmt(data.remaining) + ' | Necessari: ' + fmt(data.recovery_needed) + ' per rientrare';
+          badgeEl.textContent = 'A rischio';
+          badgeEl.className = 'px-3 py-1 rounded-full text-[10px] font-medium bg-amber-500/20 text-amber-400';
+        } else {
+          labelEl.textContent = '✅ Budget sostenibile';
+          labelEl.className = 'text-sm font-semibold text-neon-400';
+          descEl.textContent = 'Rimanenti: ' + fmt(data.remaining) + ' | Soglia: ' + fmt(data.threshold);
+          badgeEl.textContent = 'Sicuro';
+          badgeEl.className = 'px-3 py-1 rounded-full text-[10px] font-medium bg-neon-500/20 text-neon-400';
+        }
+      } catch (e) {
+        console.error('Failed to load deactivation status:', e);
       }
     }
 
@@ -1026,6 +1225,7 @@
       loadAdvice();
       loadExpenses();
       loadIncome();
+      updateVitalStatus();
       if (status && status.by_category) buildDonut(status.by_category);
     }
 
