@@ -1,6 +1,6 @@
 # Italian LLM 🇮🇹
 
-[![HuggingFace Space](https://huggingface.co/api/spaces/jeaders/Italian-LLM-Space/badge)](https://huggingface.co/spaces/jeaders/Italian-LLM-Space)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 An open-source, Italian-first AI assistant stack: a FastAPI backend, a streaming chat UI, a RAG
 pipeline, tool use, and **Pippo** — an autonomous AI character that has to survive on 100 €/month.
@@ -81,23 +81,24 @@ cp .env.example .env
 #    OLLAMA_URL=http://localhost:11434
 #    OLLAMA_MODEL=llama3.1:8b
 
-# 4. Start the API
+# 4. Start the API (it also serves the frontend)
 make inference
-# API docs: http://localhost:8000/docs
+# API + UI:    http://localhost:8000/docs  and  http://localhost:8000/app
+# Dashboard:   http://localhost:8000/app/budget_tracker.html
 
-# 5. Open the UIs
-open frontend/index.html
-open frontend/budget_tracker.html
+# 5. Open the UI
+open http://localhost:8000/app
 ```
 
-Frontend notes:
-- The chat UI resolves the API to `localhost:8000` when opened as a file, and accepts an
-  override (`?api=https://your-api.example.com`, or `localStorage['api_base']`). Pippo greets you
-  even if the API is down, and the autonomous loop tells you how to start it.
-- **Voice input** requires a secure context: serve the frontend from `localhost` (e.g.
-  `python -m http.server 3000 --directory frontend`) or HTTPS — not `file://`.
-- The Pippo budget dashboard (`budget_tracker.html`) calls `/budget/*` on its own origin: for the
-  static-only deployment, serve both the API and the frontend from the same origin (see Deployment).
+One command gives you everything on a single origin: chat, Pippo's autonomous survival and the
+budget dashboard. `make inference` uses `.venv/bin/python` when the virtualenv exists, so no
+`python` vs `python3` ambiguity (on macOS the bare `python` command usually doesn't exist).
+
+To serve only the static files instead (e.g. on another port), use:
+
+```bash
+python3 -m http.server 3000 --directory frontend   # then open http://localhost:3000
+```
 
 ### Option 2 — full local install
 

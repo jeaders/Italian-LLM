@@ -6,9 +6,11 @@ from typing import Optional, AsyncGenerator, List, Dict, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from loguru import logger
+from pathlib import Path
 
 from api.services.tools import (
     tool_web_search,
@@ -37,6 +39,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Frontend served from the API: one origin for chat, budget and autonomous mode.
+# Open http://localhost:8000/app (index.html) — /app/budget_tracker.html is the dashboard.
+_FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+if _FRONTEND_DIR.is_dir():
+    app.mount("/app", StaticFiles(directory=_FRONTEND_DIR, html=True), name="frontend")
 
 class ChatRequest(BaseModel):
     message: str
