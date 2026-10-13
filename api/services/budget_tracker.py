@@ -64,16 +64,42 @@ def save_budget(budget: Dict[str, Any]) -> None:
         json.dump(budget, f, ensure_ascii=False, indent=2)
 
 
+def _fresh_period_state() -> Dict[str, Any]:
+    """Clean per-month state: only monthly_budget survives a rollover/reset."""
+    return {
+        "expenses": [],
+        "income": [],
+        "activity_log": [],
+        "survival_actions_log": [],
+        "deactivated": False,
+        "deactivation_date": None,
+        "vital_status": "alive",
+        "last_action_date": None,
+    }
+
+
+def _archive_month(budget: Dict[str, Any], month: Optional[str]) -> None:
+    """Keep a compact summary of a closed month for history/streaks."""
+    if not month:
+        return
+    archive = budget.setdefault("history", {})
+    if archive.get(month):
+        return
+    archive[month] = {
+        "spent": round(sum(e["amount"] for e in budget.get("expenses", [])), 2),
+        "income": round(sum(i["amount"] for i in budget.get("income", [])), 2),
+        "expenses_count": len(budget.get("expenses", [])),
+        "closed_at": datetime.now().isoformat(),
+    }
+
+
 def get_current_month_budget() -> Dict[str, Any]:
     budget = load_budget()
-    now = datetime.now()
-    current_month = now.strftime("%Y-%m")
+    current_month = datetime.now().strftime("%Y-%m")
     if budget.get("current_month") != current_month:
+        _archive_month(budget, budget.get("current_month"))
         budget["current_month"] = current_month
-        budget["expenses"] = []
-        budget["deactivated"] = False
-        budget["deactivation_date"] = None
-        budget["vital_status"] = "alive"
+        budget.update(_fresh_period_state())
         save_budget(budget)
     return budget
 
@@ -126,8 +152,15 @@ def add_income(amount: float, source: str, date: str = "") -> Dict[str, Any]:
     return entry
 
 
+def _remaining_from(budget: Dict[str, Any]) -> float:
+    """Remaining budget computed from an in-memory budget dict (not from disk)."""
+    spent = sum(e["amount"] for e in budget.get("expenses", []))
+    income = sum(i["amount"] for i in budget.get("income", []))
+    return round(budget.get("monthly_budget", MONTHLY_BUDGET) - spent + income, 2)
+
+
 def _calculate_vital_status(budget: Dict[str, Any]) -> str:
-    remaining = get_remaining()
+    remaining = _remaining_from(budget)
     if remaining < DEACTIVATION_THRESHOLD:
         return "dead"
     if remaining < 0:
@@ -207,11 +240,9 @@ def get_status() -> Dict[str, Any]:
 
 def reset_month() -> Dict[str, Any]:
     budget = load_budget()
+    _archive_month(budget, budget.get("current_month"))
     budget["current_month"] = datetime.now().strftime("%Y-%m")
-    budget["expenses"] = []
-    budget["deactivated"] = False
-    budget["deactivation_date"] = None
-    budget["vital_status"] = "alive"
+    budget.update(_fresh_period_state())
     save_budget(budget)
     return budget
 
@@ -233,58 +264,25 @@ def generate_tip(remaining: float, by_category: Dict[str, float], model_fn=None)
     return "Stai gestendo il budget di 100€/mese. Continua a monitorare ogni spesa: compra in discount, cucina sempre a casa, evita sprechi, sospendi abbonamenti non essenziali e ricorda che ogni euro risparmiato è un passo in più verso la sopravvivenza."
 
 
-def get_daily_budget() -> float:
+def get_pippo_state() -> Dict[str, Any]:
+    """Compact snapshot of Pippo's survival state, used to ground the system prompt."""
+    budget = get_current_month_budget()
+    by_cat = get_expenses_by_category()
+    top_categories = dict(sorted(by_cat.items(), key=lambda kv: kv[1], reverse=True)[:3])
     now = datetime.now()
     days_in_month = (now.replace(day=28) + timedelta(days=4)).day
-    remaining = get_remaining()
-    return round(max(remaining / max(days_in_month, 1), 0.0), 2)
-
-
-def get_goals() -> Dict[str, Any]:
-    budget = get_current_month_budget()
-    remaining = get_remaining()
-    by_cat = get_expenses_by_category()
-    food_spent = by_cat.get("cibo", 0.0)
-    transport_spent = by_cat.get("trasporti", 0.0)
-    bills_spent = by_cat.get("bollette", 0.0)
-
-    food_limit = 35.0
-    transport_limit = 15.0
-    daily_food_budget = round(food_limit / 30, 2)
-
-    goals = [
-        {
-            "label": "Cibo (max 35€/mese)",
-            "spent": food_spent,
-            "limit": food_limit,
-            "unit": "€",
-            "daily_budget": daily_food_budget,
-            "status": "ok" if food_spent <= food_limit else "over",
-        },
-        {
-            "label": "Trasporti (max 15€/mese)",
-            "spent": transport_spent,
-            "limit": transport_limit,
-            "unit": "€",
-            "status": "ok" if transport_spent <= transport_limit else "over",
-        },
-        {
-            "label": "Bollette essenziali",
-            "spent": bills_spent,
-            "limit": None,
-            "unit": "€",
-            "status": "ok",
-        },
-        {
-            "label": "Rimanenti totali",
-            "spent": None,
-            "limit": budget["monthly_budget"],
-            "unit": "€",
-            "value": remaining,
-            "status": "ok" if remaining >= 0 else "over",
-        },
-    ]
-    return {"daily_budget": get_daily_budget(), "goals": goals}
+    return {
+        "month": budget.get("current_month"),
+        "monthly_budget": budget["monthly_budget"],
+        "spent": get_spent(),
+        "income": get_income(),
+        "remaining": get_remaining(),
+        "vital_status": budget.get("vital_status", "alive"),
+        "deactivated": budget.get("deactivated", False),
+        "daily_budget": get_daily_budget(),
+        "days_left": max(days_in_month - now.day, 0),
+        "top_categories": top_categories,
+    }
 
 
 def get_vital_status() -> Dict[str, Any]:
@@ -354,6 +352,14 @@ def perform_action(action_id: str) -> Dict[str, Any]:
     action = next((a for a in ACTIONS if a["id"] == action_id), None)
     if not action:
         return {"success": False, "action": action_id, "income": 0, "message": "Azione non trovata"}
+
+    if budget.get("deactivated"):
+        return {
+            "success": False,
+            "action": action_id,
+            "income": 0,
+            "message": "Pippo è disattivato: recupera crediti (entrate) o resetta il mese per riattivarlo.",
+        }
 
     cost = action.get("cost", 0)
     if cost > 0:
@@ -523,7 +529,25 @@ def get_goals() -> Dict[str, Any]:
 
 def get_advice(model_fn=None) -> Dict[str, Any]:
     status = get_status()
-    tip = generate_tip(status["remaining"], status["by_category"], model_fn)
+    tip = None
+    tip_source = "rules"
+    if model_fn is not None:
+        try:
+            prompt = (
+                "Sei Pippo, un'intelligenza artificiale italiana autonoma che deve sopravvivere con 100 euro al mese. "
+                f"Stato attuale: rimanenti {status['remaining']}€, spesi {status['spent']}€, entrate {status['income']}€, "
+                f"stato vitale {status['vital_status']}, spese per categoria: {status['by_category']}. "
+                "Dai UN solo consiglio concreto e breve (massimo 3 frasi), in italiano, in prima persona, "
+                "come se la tua sopravvivenza dipendesse da quel consiglio."
+            )
+            candidate = model_fn(prompt)
+            if candidate and candidate.strip() and "non è attualmente disponibile" not in candidate:
+                tip = candidate.strip()
+                tip_source = "ai"
+        except Exception as e:
+            logger.warning(f"AI advice failed, falling back to rules: {e}")
+    if tip is None:
+        tip = generate_tip(status["remaining"], status["by_category"], model_fn)
     goals = get_goals()
     actions_list = [
         "Compra pasta, riso, legumi e uova in discount: sono la base della sopravvivenza con 100€/mese",
@@ -538,6 +562,7 @@ def get_advice(model_fn=None) -> Dict[str, Any]:
     return {
         "status": status,
         "tip": tip,
+        "tip_source": tip_source,
         "actions": actions_list,
         "goals": goals,
     }

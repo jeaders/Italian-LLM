@@ -1,11 +1,35 @@
+import ast
+import operator
 import re
-import math
 import httpx
 import logging
 from datetime import datetime
 from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
+
+_ALLOWED_BINOPS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.FloorDiv: operator.floordiv,
+    ast.Mod: operator.mod,
+    ast.Pow: operator.pow,
+}
+_ALLOWED_UNARYOPS = {ast.UAdd: operator.pos, ast.USub: operator.neg}
+
+_ITALIAN_OPS = [
+    ("elevato alla", "**"),
+    ("alla", "**"),
+    ("per", "*"),
+    ("diviso", "/"),
+    ("divisa", "/"),
+    ("più", "+"),
+    ("piu", "+"),
+    ("meno", "-"),
+    ("x", "*"),
+]
 
 
 def tool_web_search(query: str) -> str:
@@ -21,14 +45,39 @@ def tool_web_search(query: str) -> str:
         return f"Errore nella ricerca web: {str(e)}"
 
 
+def _normalize_expression(expression: str) -> str:
+    """Translate common Italian arithmetic words into operators."""
+    text = expression.lower()
+    for word, op in _ITALIAN_OPS:
+        text = re.sub(rf"\b{re.escape(word)}\b", op, text)
+    text = text.replace(",", ".")
+    return "".join(c for c in text if c in "0123456789+-*/(). %s")
+
+
+def _eval_node(node):
+    if isinstance(node, ast.Constant):
+        if isinstance(node.value, (int, float)):
+            return node.value
+        raise ValueError("costante non numerica")
+    if isinstance(node, ast.BinOp) and type(node.op) in _ALLOWED_BINOPS:
+        return _ALLOWED_BINOPS[type(node.op)](_eval_node(node.left), _eval_node(node.right))
+    if isinstance(node, ast.UnaryOp) and type(node.op) in _ALLOWED_UNARYOPS:
+        return _ALLOWED_UNARYOPS[type(node.op)](_eval_node(node.operand))
+    raise ValueError(f"operazione non supportata: {type(node).__name__}")
+
+
 def tool_calculator(expression: str) -> str:
-    allowed = set("0123456789+-*/().,%s ")
-    safe_expr = "".join(c for c in expression if c in allowed)
+    safe_expr = _normalize_expression(expression)
+    if not safe_expr.strip():
+        return "Errore nel calcolo: nessuna espressione riconosciuta"
     try:
-        result = eval(safe_expr, {"__builtins__": {}}, {"math": math, "sqrt": math.sqrt, "log": math.log, "sin": math.sin, "cos": math.cos, "pi": math.pi})
+        tree = ast.parse(safe_expr, mode="eval")
+        result = _eval_node(tree.body)
+        if isinstance(result, float) and result.is_integer():
+            result = int(result)
         return str(result)
     except Exception as e:
-        return f"Errore nel calcolo: {str(e)}"
+        return f"Errore nel calcolo: {e}"
 
 
 def tool_wikipedia(query: str) -> str:

@@ -2,426 +2,245 @@
 
 [![HuggingFace Space](https://huggingface.co/api/spaces/jeaders/Italian-LLM-Space/badge)](https://huggingface.co/spaces/jeaders/Italian-LLM-Space)
 
-Un Large Language Model open source in italiano, con API, RAG, tool use e un assistente specializzato per il budget mensile.
+An open-source, Italian-first AI assistant stack: a FastAPI backend, a streaming chat UI, a RAG
+pipeline, tool use, and **Pippo** — an autonomous AI character that has to survive on 100 €/month.
 
-## 🎯 Obiettivo
+> **Project status: active work in progress.** The API, the survival simulation and the tool layer
+> are working and tested. The LLM layer is provider-based (Ollama / Groq / WebLLM / local
+> transformers): bring any model you like, Pippo supplies the personality, the memory and the
+> survival loop.
 
-Creare un LLM italiano accessibile e utile, completamente open source, che possa:
-- Comprendere e generare testo italiano naturale
-- Eseguire ragionamento complesso
-- Accedere a informazioni aggiornate tramite web search
-- Eseguire calcoli e rispondere con tool verificati
-- Essere deployato gratuitamente su hardware consumer
-- Aiutare nella gestione del budget mensile con un assistente dedicato
+## ✨ Features
 
-## ✨ Caratteristiche
+- **Chat backend (FastAPI)** with `/chat` and `/chat/stream`, conversation history, RAG context and
+  automatic tool routing
+- **Pippo survival simulation** — a budget tracker played as a life-or-death game: vital status,
+  expenses, income, simulated freelance actions, earnings opportunities, activity log and
+  deactivation when the budget collapses
+- **Grounded personality** — Pippo's real budget state (remaining, daily budget, top categories,
+  vital status) is injected into the system prompt, so the model speaks about its actual situation
+- **AI advice with a rules fallback** — `/budget/advice` uses the configured LLM when one is
+  reachable, otherwise the built-in survival heuristics
+- **RAG** with ChromaDB and multilingual embeddings, plus document ingest endpoint
+- **Tools**: web search (DuckDuckGo), calculator (safe AST evaluator that understands "128 per 56"),
+  Italian Wikipedia, weather, news, date/time, unit conversion
+- **Multiple LLM providers**: Ollama (local), transformers (local GPU/CPU), WebLLM (in-browser via
+  WebGPU) and Groq (free API key) — selectable from the UI
+- **Modern chat UI**: streaming responses, Markdown rendering, conversation search, JSON
+  export/import, keyboard shortcuts, dark mode, voice input, mobile-first layout
+- **Pippo survival UI**: terminal-style dashboard with vital badge, action cards with simulated
+  outcomes, earnings sources and activity log
 
-- **Modello Base**: fine-tuning instruction-style con LoRA/QLoRA
-- **RAG**: Retrieval Augmented Generation per risposte accurate e citate
-- **Tool Use**: calcolatrice, web search, Wikipedia, meteo, notizie, conversioni
-- **Budget Tracker**: frontend dedicato per tracciare spese e ricevere consigli di sopravvivenza con 100 €/mese
-- **Multi-provider**: Groq, WebLLM browser-based, backend locale
-- **UI Moderna**: chat in streaming, cronologia conversazioni, dark mode, sidebar, insights
-- **Voice Input**: riconoscimento vocale per input hands-free
-- **Markdown Rendering**: rendering completo con code highlighting
-- **Focus Mode**: modalità scrittura senza distrazioni
-- **Keyboard Shortcuts**: Cmd+K per comandi rapidi
-- **Conversation Management**: ricerca, esporta/importa JSON, riepiloghi AI
-- **Smart Features**: conta parole/caratteri, suoni, validazione modelli Groq in tempo reale
-- **Budget Gamification**: health score, streak mesi, achievement system
-- **Budget Insights**: proiezione fine mese, media giornaliera, grafici categoria
-- **Mobile First**: navigazione bottom, touch-friendly, safe areas, PWA
-- **Offline Ready**: service worker, caching, funziona senza connessione
-- **Deploy Gratuito**: Netlify, HuggingFace Spaces, Fly.io, Vercel, Docker
-
-## 🏗️ Architettura
+## 🏗️ Architecture
 
 ```
-┌──────────────────────────────────────────────┐
-│  Frontend                                   │
-│  - Chat UI (frontend/index.html)             │
-│  - Budget Tracker (frontend/budget_tracker.html) │
-├──────────────────────────────────────────────┤
-│  API Gateway (FastAPI)                       │
-│  - /chat, /chat/stream                       │
-│  - /budget/status, /budget/expenses          │
-│  - /budget/advice, /budget/reset             │
-├──────────────────────────────────────────────┤
-│  LLM Engine                                 │
-│  - transformers / Ollama backend             │
-│  - LoRA adapter locale                       │
-│  - WebLLM browser inference                  │
-├──────────────────────────────────────────────┤
-│  RAG Layer (ChromaDB + Embeddings)           │
-├──────────────────────────────────────────────┤
-│  Tools (web search, calc, wiki, meteo, news) │
-└──────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────┐
+│  Frontend (static, no build step)                         │
+│  - frontend/index.html          chat UI (Groq/WebLLM/API) │
+│  - frontend/budget_tracker.html Pippo survival dashboard  │
+├───────────────────────────────────────────────────────────┤
+│  API gateway (FastAPI, api/main.py)                       │
+│  - /chat, /chat/stream        grounded prompts + tools    │
+│  - /budget/*                  survival simulation         │
+│  - /rag/ingest                vector store writes         │
+├───────────────────────────────────────────────────────────┤
+│  Services                                                  │
+│  - api/services/tools.py          web, calc, wiki, meteo… │
+│  - api/services/rag_service.py    ChromaDB + embeddings    │
+│  - api/services/budget_tracker.py Pippo state machine      │
+├───────────────────────────────────────────────────────────┤
+│  LLM engines: Ollama · transformers · WebLLM · Groq       │
+└───────────────────────────────────────────────────────────┘
 ```
 
-## 🚀 Quick Start
+## 🚀 Quick start
 
-### Prerequisiti
+### Prerequisites
 
-- Python **3.11 o 3.12** per il training
-- Python **3.10+** per eseguire l'API
-- 16GB RAM (minimo), 32GB+ consigliato per il training
+- Python 3.11+ (3.12 recommended for training)
+- 16 GB RAM minimum
 - macOS / Linux / Windows
 
-### Opzione 1: API + UI con Ollama (consigliata)
+### Option 1 — with Ollama (recommended for local inference)
 
 ```bash
-# 1. Installa Ollama
+# 1. Install Ollama and pull a model
 brew install --cask ollama
-
-# 2. Scarica un modello italiano
 ollama pull llama3.1:8b
 
-# 3. Clona il repo
+# 2. Clone and configure
 git clone https://github.com/jeaders/Italian-LLM.git
 cd Italian-LLM
 cp .env.example .env
 
-# 4. In .env imposta
-USE_OLLAMA=true
-OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1:8b
+# 3. In .env
+#    USE_OLLAMA=true
+#    OLLAMA_URL=http://localhost:11434
+#    OLLAMA_MODEL=llama3.1:8b
 
-# 5. Avvia API
+# 4. Start the API
 make inference
-# API: http://localhost:8000
-# Docs: http://localhost:8000/docs
+# API docs: http://localhost:8000/docs
 
-# 6. Apri la UI
+# 5. Open the UIs
 open frontend/index.html
-# Budget Tracker
 open frontend/budget_tracker.html
 ```
 
-> Se Ollama non si installa (es. macOS 12), usa la modalità Groq nel frontend: vedi sezione **Netlify + Groq**.
-
-### Opzione 2: Installazione completa
+### Option 2 — full local install
 
 ```bash
 git clone https://github.com/jeaders/Italian-LLM.git
 cd Italian-LLM
 python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env
 uvicorn api.main:app --reload --port 8000
 open frontend/index.html
 ```
 
-## 🧠 Training: Pippo — sopravvivenza con 100 €/mese
+Without a local model the API still runs: chat answers with a clear "model unavailable" message,
+tools, RAG and the whole Pippo simulation keep working.
 
-Questo repo include anche un flusso dedicato per addestrare un assistente specializzato nel sopravvivere con 100 € al mese.
+## 🧠 Pippo — surviving on 100 €/month
 
-### Dataset
+Pippo is the heart of this project: an Italian AI character whose only goal is to stay alive on
+100 € per month. The simulation is real state, not decoration:
 
-- `data/processed/survival_instructions.json`: istruzioni italiane su cibo, affitto, bollette, trasporti, aiuti sociali, baratto e risparmio estremo
+- **Vital status**: `alive` → `warning` → `danger` → `critical` → `dead`, driven by the remaining
+  budget (deactivation below −20 €)
+- **Expenses and income** are tracked per calendar month; when the month rolls over the previous
+  month is archived to `history` and the budget restarts clean
+- **Survival actions** (microtasks, freelance, tutoring, transcription…) have a simulated outcome,
+  a cost and an urgency that scales with how close Pippo is to deactivation. A deactivated Pippo
+  cannot act: recover income or reset the month
+- **Grounded chat**: Pippo's system prompt includes his live state (remaining, spent, income, daily
+  budget, days left, top categories), so he complains about *his* budget, not a generic one
+- **Advice**: `GET /budget/advice` asks the LLM when one is configured, otherwise uses the built-in
+  survival heuristics (`tip_source: "ai" | "rules"` in the response)
 
-### Configurazione consigliata per budget limitato
+State lives in `data/budget/budget_tracker.json` (single-user, file-backed — see the roadmap).
 
-```yaml
-# training/configs/sft_config.yaml
-model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
-dataset_path: "data/processed/survival_instructions.json"
-output_dir: "./models/adapter/pippo-survival"
-max_seq_length: 1024
+## 📡 API
 
-training:
-  epochs: 3
-  batch_size: 2
-  gradient_accumulation: 8
-  learning_rate: 2e-4
-  warmup_steps: 100
-  logging_steps: 10
-  save_steps: 500
-  fp16: true
-  optim: "paged_adamw_8bit"
+Base URL: `http://localhost:8000` — interactive docs at `/docs`.
 
-lora:
-  r: 8
-  lora_alpha: 16
-  lora_dropout: 0.05
-  target_modules:
-    - "q_proj"
-    - "k_proj"
-    - "v_proj"
-    - "o_proj"
-    - "gate_proj"
-    - "up_proj"
-    - "down_proj"
-```
-
-### Avvia training
-
-```bash
-# Setup automatico con Python 3.12
-make train-pippo
-```
-
-Lo script:
-1. Verifica la presenza di Python 3.12
-2. Crea/riusa `.venv312`
-3. Installa le dipendenze
-4. Avvia `training/scripts/train_sft.py`
-
-Se Python 3.12 non è installato:
-```bash
-brew install python@3.12
-make train-pippo
-```
-
-## 📊 Dataset
-
-Utilizziamo una combinazione di dataset italiani:
-
-| Dataset | Contenuto | Dimensione |
-|---------|-----------|------------|
-| Wikipedia Italiano | Enciclopedia | ~1.5M articoli |
-| OSCAR-it | Web corpus | ~50GB |
-| CulturaX-it | Dati web | ~30GB |
-| Testi legali | Normativa italiana | ~5GB |
-| Istruzioni custom | QA, reasoning, sopravvivenza | ~100k esempi |
-
-## 🔧 API
-
-### Endpoints
-
-| Metodo | Path | Descrizione |
+| Method | Path | Description |
 |--------|------|-------------|
-| POST | `/chat` | Chat sincrona |
-| POST | `/chat/stream` | Chat con streaming |
-| GET | `/health` | Health check |
-| GET | `/tools` | Lista tool disponibili |
-| POST | `/rag/ingest` | Aggiungi documenti al RAG |
-| POST | `/budget/expenses` | Aggiungi spesa |
-| GET | `/budget/status` | Stato budget mensile |
-| GET | `/budget/advice` | Consigli di sopravvivenza |
-| POST | `/budget/reset` | Reset budget mensile |
+| `GET` | `/health` | Health check and active backend |
+| `GET` | `/tools` | Available tools and their parameters |
+| `POST` | `/chat` | Synchronous chat (RAG, tools, Pippo state) |
+| `POST` | `/chat/stream` | Streaming chat |
+| `GET` | `/conversations/{id}` | Conversation history |
+| `DELETE` | `/conversations/{id}` | Delete a conversation |
+| `POST` | `/rag/ingest` | Add documents to the vector store |
+| `POST` | `/budget/expenses` | Record an expense |
+| `POST` | `/budget/income` | Record income |
+| `GET` | `/budget/status` | Budget status and alerts |
+| `GET` | `/budget/advice` | Survival advice (AI or rules) |
+| `GET` | `/budget/vital-status` | Pippo's vital status |
+| `GET` | `/budget/actions` | Available survival actions |
+| `POST` | `/budget/actions/{action_id}` | Perform a survival action |
+| `GET` | `/budget/earnings` | Earning opportunity catalogue |
+| `GET` | `/budget/activity-log` | Recent activity log |
+| `GET` | `/budget/deactivation` | Deactivation risk and recovery info |
+| `POST` | `/budget/reset` | Reset the month (`{"confirm": true}`) |
 
-### Esempio
+Example:
 
 ```bash
-curl -X POST "http://localhost:8000/chat" \
+curl -X POST http://localhost:8000/chat \
   -H "Content-Type: application/json" \
-  -d '{
-    "message": "Spiega la relatività generale",
-    "use_rag": true,
-    "use_web_search": false,
-    "max_tokens": 512
-  }'
+  -d '{"message": "Quanto fa 128 per 56?", "use_rag": false, "use_web_search": false}'
+
+curl http://localhost:8000/budget/vital-status
+curl -X POST http://localhost:8000/budget/actions/microtask
 ```
 
-Budget tracker:
+## ⚙️ Configuration
+
+Copy `.env.example` to `.env`:
+
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `USE_OLLAMA` | `false` | Use Ollama as the LLM backend |
+| `OLLAMA_URL` | `http://localhost:11434` | Ollama base URL |
+| `OLLAMA_MODEL` | `llama3.1:8b` | Default model |
+| `OLLAMA_CHAT_MODEL` | — | Optional separate chat model |
+| `MODEL_NAME` | `mistralai/Mistral-7B-v0.3` | transformers model (when not using Ollama) |
+| `EMBEDDING_MODEL` | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | RAG embeddings |
+| `CHROMA_DB_PATH` | `./data/embeddings/chroma` | Vector store location |
+
+The chat UI also supports Groq and WebLLM directly in the browser (no backend needed) — see
+`frontend/index.html`.
+
+## 🧪 Tests
 
 ```bash
-curl -X POST "http://localhost:8000/budget/expenses" \
-  -H "Content-Type: application/json" \
-  -d '{"amount": 5.5, "category": "cibo", "description": "pasta"}'
-
-curl "http://localhost:8000/budget/status"
-curl "http://localhost:8000/budget/advice"
+make test          # or: python -m pytest tests/ -v
 ```
 
-## 📦 Deploy pubblico
+18 tests covering the API surface, the budget simulation (reset, month rollover, deactivation),
+tool routing and the calculator.
 
-### HuggingFace Space
+## 🚢 Deployment
 
-Questo repo è predisposto per uno Space pubblico.
+| Target | Notes |
+|--------|-------|
+| **Docker** | `docker-compose up --build` serves the API; open the frontend pages from `frontend/` |
+| **Fly.io** | `flyctl launch && flyctl deploy` |
+| **HuggingFace Spaces** | Gradio/Streamlit entrypoints in `frontend/` and `space/` |
+| **Netlify (static)** | Publishes `frontend/` with no build step. Note: the Pippo dashboard calls
+  `/budget/*` on its own origin, so it needs the API served from the same origin (or a proxy) —
+  chat works standalone via Groq/WebLLM. |
 
-1. Vai su [huggingface.co/spaces](https://huggingface.co/spaces)
-2. Crea un nuovo Space come **Gradio** o **Streamlit**
-3. Collega il repo GitHub `jeaders/Italian-LLM`
-4. Configura le variabili d'ambiente
-5. Il deploy parte automaticamente
-
-### Locale con Ollama
-
-```bash
-brew install --cask ollama
-ollama pull llama3.1:8b
-cp .env.example .env
-uvicorn api.main:app --reload --port 8000
-open frontend/index.html
-```
-
-> Nota: Ollama richiede macOS Sonoma o superiore. Su macOS 12/13 usa la modalità Groq dal frontend.
-
-### Docker
-
-```bash
-docker-compose up --build
-```
-
-### Fly.io
-
-```bash
-flyctl launch
-flyctl deploy
-```
-
-### Netlify + frontend statico (provider gratuiti)
-
-```bash
-# 1) Installa la CLI di Netlify
-npm install -g netlify-cli
-
-# 2) Esegui il login
-netlify login
-
-# 3) Collega il repo o deploya la cartella frontend
-netlify init
-# scegli: "Create & configure new site"
-# build command: lascia vuoto
-# publish directory: frontend
-```
-
-Provider gratuiti nel frontend:
-- **WebLLM**: nessuna API key, modello nel browser via WebGPU. Modelli: Llama 3.2 1B/3B, Phi 3.5 Mini, Qwen 2.5, Gemma 2.
-- **Groq**: API key gratuita da https://console.groq.com, modelli Llama/Mixtral/Gemma/DeepSeek.
-- **Backend locale**: usa l'API Python se in esecuzione.
-
-Deploy automatico da GitHub:
-- Collega il repo `jeaders/Italian-LLM`
-- Configura:
-  - **Base directory**: lascia vuoto
-  - **Build command**: lascia vuoto
-  - **Publish directory**: `frontend`
-- Aggiungi le variabili d'ambiente se servono
-- Deploy!
-
-## 🧪 Test
-
-```bash
-# Avvia l'API in background
-uvicorn api.main:app --host 0.0.0.0 --port 8000 &
-
-# Esegui i test
-python -m pytest tests/ -v
-
-# Oppure con Make
-make test
-```
-
-## 📁 Struttura progetto
+## 📁 Project structure
 
 ```
 Italian-LLM/
-├── api/                        # Backend FastAPI
-│   ├── main.py                 # Endpoints: chat, budget, health
-│   └── services/               # Tool, RAG, budget tracker
-├── frontend/                   # UI
-│   ├── index.html              # Chat UI con sidebar, ricerca, template, Groq
-│   └── budget_tracker.html     # Budget Tracker standalone con insights
-├── training/                   # Pipeline di training
-│   ├── scripts/
-│   │   ├── train_sft.py        # Training LoRA/QLoRA
-│   │   ├── evaluate.py         # Valutazione modelli
-│   │   └── preprocess_data.py  # Preparazione dataset
-│   └── configs/
-│       └── sft_config.yaml     # Configurazione training
-├── data/
-│   ├── raw/                    # Dati grezzi
-│   └── processed/
-│       ├── italian_instructions.json
-│       └── survival_instructions.json
-├── models/                     # Modelli e adapter
-│   ├── base/
-│   ├── adapter/
-│   └── merged/
-├── rag/                        # Retrieval Augmented Generation
-├── space/                      # HuggingFace Space
-├── tests/
-│   └── test_api.py             # Test API + budget
-├── notebooks/
-│   └── train.ipynb             # Training interattivo
-├── deploy/                     # Docker e deploy
-├── logs/                       # Log applicazione
-├── setup_training.sh           # Setup ambiente training
-├── Makefile                    # Comandi rapidi
-├── requirements.txt            # Dipendenze
-├── docker-compose.yml          # Orchestrazione servizi
-├── .env.example                # Configurazione ambiente
-├── netlify.toml                 # Configurazione deploy Netlify
-└── README.md                   # Questo file
+├── api/
+│   ├── main.py                  # FastAPI app: chat, tools, budget endpoints
+│   └── services/
+│       ├── tools.py             # web search, calculator, wikipedia, weather, news…
+│       ├── rag_service.py       # ChromaDB + embeddings
+│       └── budget_tracker.py    # Pippo survival state machine
+├── frontend/
+│   ├── index.html               # chat UI (Groq / WebLLM / local API)
+│   └── budget_tracker.html      # Pippo survival dashboard
+├── training/                    # LoRA/QLoRA pipeline and configs (incl. Pippo SFT)
+├── data/                        # datasets and runtime state
+├── tests/                       # pytest suite
+├── deploy/                      # Docker and deployment files
+└── Makefile                     # make inference / train-pippo / test / …
 ```
 
-## ⚙️ Configurazione
+## 🗺️ Roadmap
 
-Copia `.env.example` in `.env` e configura:
+- [ ] SQLite persistence for conversations (today: in-memory, lost on restart)
+- [ ] Multi-user budgets (today: single shared budget file)
+- [ ] Action cooldowns and daily limits in the survival loop
+- [ ] Release a trained Pippo adapter (the survival SFT config already exists)
+- [ ] Real token streaming for the local transformers backend
 
-```bash
-# Modello
-MODEL_NAME=mistralai/Mistral-7B-v0.3
-ADAPTER_PATH=./models/adapter
-BASE_MODEL_PATH=./models/base
+## 🤝 Contributing
 
-# Ollama (consigliato per hardware consumer)
-USE_OLLAMA=true
-OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1:8b
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-# API
-API_HOST=0.0.0.0
-API_PORT=8000
-API_ENV=development
+## 📄 License
 
-# Embedding
-EMBEDDING_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
-CHROMA_DB_PATH=./data/embeddings/chroma
+MIT — see [LICENSE](LICENSE).
 
-# Web search
-DUCKDUCKGO_API_KEY=
+## 🙏 Acknowledgments
 
-# Database
-DATABASE_URL=sqlite:///./data/chat_history.db
-
-# Logging
-LOG_LEVEL=INFO
-```
-
-## 🧰 Comandi Make
-
-```bash
-make help           # Mostra tutti i comandi disponibili
-make install        # Installa dipendenze
-make train          # Addestra modello generico
-make train-pippo    # Addestra Pippo su sopravvivenza 100€/mese
-make inference      # Avvia API con uvicorn
-make ui             # Apri chat UI
-make setup-ollama   # Installa Ollama e scarica modello
-make deploy         # Deploy con Docker
-make deploy-netlify # Deploy frontend su Netlify
-make test           # Esegui test pytest
-make clean          # Pulisci cache e file temporanei
-make data           # Scarica dataset
-```
-
-## 🤝 Contribuire
-
-Vedi [CONTRIBUTING.md](CONTRIBUTING.md)
-
-## 📄 Licenza
-
-MIT License - vedi [LICENSE](LICENSE)
-
-## 🙏 Riconoscimenti
-
-- [Mistral AI](https://mistral.ai) per il modello base
-- [Hugging Face](https://huggingface.co) per l'ecosistema
-- [LangChain](https://langchain.com) per l'orchestrazione
-- [Ollama](https://ollama.ai) per il runtime locale
-- La community italiana AI per il supporto
-
-## 📞 Contatti
-
-- GitHub Issues: per bug e feature requests
-- Discussions: per domande generali
+- [Hugging Face](https://huggingface.co) for the training ecosystem
+- [Ollama](https://ollama.ai) for local inference
+- [ChromaDB](https://www.trychroma.com) and [sentence-transformers](https://www.sbert.net) for RAG
+- [Groq](https://groq.com) and [WebLLM](https://webllm.mlc.ai/) for browser/fast inference options
+- The Italian AI community
 
 ---
 
-⭐ Se ti piace il progetto, lascia una stella su GitHub!
+⭐ If you like the project, leave a star on GitHub!
 
-Made with ❤️ in Italy 🇮🇹 Alex Mirici Web Developer
+Made with ❤️ in Italy 🇮🇹 by [jeaders](https://github.com/jeaders)

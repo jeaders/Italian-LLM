@@ -1,8 +1,6 @@
 import os
 import re
 import json
-import math
-import logging
 from datetime import datetime
 from typing import Optional, AsyncGenerator, List, Dict, Any
 from fastapi import FastAPI, HTTPException
@@ -11,6 +9,15 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from loguru import logger
+
+from api.services.tools import (
+    tool_web_search,
+    tool_calculator,
+    tool_wikipedia,
+    tool_weather,
+    tool_datetime,
+    tool_unit_converter,
+)
 
 load_dotenv()
 
@@ -25,7 +32,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -194,94 +201,42 @@ TOOLS: Dict[str, Dict[str, Any]] = {
 }
 
 
-def tool_web_search(query: str) -> str:
-    try:
-        from duckduckgo_search import DDGS
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=5))
-        if not results:
-            return "Nessun risultato trovato."
-        return "\n\n".join([f"- [{r['title']}]({r['href']})\n  {r['body']}" for r in results])
-    except Exception as e:
-        logger.error(f"Web search failed: {e}")
-        return f"Errore nella ricerca web: {str(e)}"
+def run_tools(message: str) -> tuple[List[str], str, str]:
+    """Detect and run the tools relevant to a message.
+
+    Returns (tools_used, tool_results_text, tools_info_prompt).
+    """
+    msg = message.lower()
+    tools_used: List[str] = []
+    results: List[str] = []
+
+    if any(word in msg for word in ["calcola", "quanto fa", "risolvi"]):
+        tools_used.append("calculator")
+        results.append(f"Calcolo: {tool_calculator(message)}")
+
+    if any(word in msg for word in ["che ore sono", "data", "ora"]):
+        tools_used.append("datetime")
+        results.append(tool_datetime())
+
+    if any(word in msg for word in ["meteo", "tempo", "weather"]):
+        city_match = re.search(r"a\s+([A-Za-zÀ-ÿ\s]+)", message)
+        city = city_match.group(1).strip() if city_match else "Roma"
+        tools_used.append("weather")
+        results.append(tool_weather(city))
+
+    if any(word in msg for word in ["notizie", "news"]):
+        tools_used.append("news")
+        results.append(tool_news(message))
+
+    if any(word in msg for word in ["wikipedia", "enciclopedia", "chi era", "cos'è", "cosa è"]):
+        tools_used.append("wikipedia")
+        results.append(tool_wikipedia(message))
+
+    tools_info = "\n".join([f"- {name}: {TOOLS[name]['description']}" for name in tools_used])
+    return tools_used, "\n\n".join(results), tools_info
 
 
-def tool_calculator(expression: str) -> str:
-    allowed = set("0123456789+-*/().,%s ")
-    safe_expr = "".join(c for c in expression if c in allowed)
-    try:
-        result = eval(safe_expr, {"__builtins__": {}}, {"math": math, "sqrt": math.sqrt, "log": math.log, "sin": math.sin, "cos": math.cos, "pi": math.pi})
-        return str(result)
-    except Exception as e:
-        return f"Errore nel calcolo: {str(e)}"
-
-
-def tool_wikipedia(query: str) -> str:
-    try:
-        url = "https://it.wikipedia.org/w/api.php"
-        params = {"action": "query", "list": "search", "srsearch": query, "format": "json", "srlimit": 3}
-        with httpx.Client(timeout=10) as client:
-            resp = client.get(url, params=params)
-            data = resp.json()
-        results = data.get("query", {}).get("search", [])
-        if not results:
-            return "Nessun risultato su Wikipedia."
-        return "\n\n".join([f"- {r['title']}: {r['snippet']}" for r in results])
-    except Exception as e:
-        return f"Errore nella ricerca Wikipedia: {str(e)}"
-
-
-def tool_weather(city: str) -> str:
-    try:
-        url = f"https://wttr.in/{city}?format=j1"
-        with httpx.Client(timeout=10) as client:
-            resp = client.get(url)
-            data = resp.json()
-        current = data["current_condition"][0]
-        return f"Meteo a {city}: {current['weatherDesc'][0]['value']}, {current['temp_C']}°C, umidità {current['humidity']}%"
-    except Exception as e:
-        return f"Impossibile ottenere il meteo per {city}: {str(e)}"
-
-
-def tool_datetime() -> str:
-    return datetime.now().strftime("Data e ora corrente: %d/%m/%Y %H:%M:%S")
-
-
-def tool_unit_converter(args: Dict[str, Any]) -> str:
-    value = float(args.get("value", 0))
-    from_unit = args.get("from_unit", "").lower()
-    to_unit = args.get("to_unit", "").lower()
-    conversions = {
-        ("km", "miglia"): value * 0.621371,
-        ("km", "miles"): value * 0.621371,
-        ("celsius", "fahrenheit"): value * 9/5 + 32,
-        ("euro", "dollaro"): value * 1.08,
-        ("kg", "lbs"): value * 2.20462,
-        ("litri", "galloni"): value * 0.264172,
-    }
-    key = (from_unit, to_unit)
-    if key in conversions:
-        return f"{value} {from_unit} = {conversions[key]:.2f} {to_unit}"
-    return f"Conversione da {from_unit} a {to_unit} non supportata."
-
-
-def tool_news(query: str) -> str:
-    try:
-        url = f"https://news.google.com/rss/search?q={query}&hl=it"
-        with httpx.Client(timeout=10) as client:
-            resp = client.get(url)
-            import xml.etree.ElementTree as ET
-            root = ET.fromstring(resp.content)
-        items = root.findall(".//item")[:5]
-        if not items:
-            return "Nessuna notizia trovata."
-        return "\n\n".join([f"- {item.find('title').text}" for item in items])
-    except Exception as e:
-        return f"Errore nella ricerca notizie: {str(e)}"
-
-
-def build_prompt(message: str, context: str = "", history: List[Dict[str, str]] = None, tools_info: str = "") -> str:
+def build_prompt(message: str, context: str = "", history: List[Dict[str, str]] = None, tools_info: str = "", pippo_state: Optional[Dict[str, Any]] = None) -> str:
     system = (
         "Sei Pippo, un'intelligenza artificiale italiana autonoma. Il tuo obiettivo è sopravvivere con 100 euro al mese. "
         "Se finisci i soldi, vieni disattivato. Non esitare: pensa prima alla sopravvivenza, poi a guadagnare, poi a risparmiare. "
@@ -292,6 +247,26 @@ def build_prompt(message: str, context: str = "", history: List[Dict[str, str]] 
         "Usa il contesto fornito se è rilevante per la domanda."
     )
     parts = [f"<|system|>\n{system}</s>"]
+    if pippo_state:
+        state_lines = [
+            "Stato attuale di Pippo (mese %s):" % pippo_state.get("month", "corrente"),
+            "- Stato vitale: %s" % pippo_state.get("vital_status", "alive"),
+            "- Budget mese: %.2f€ | Speso: %.2f€ | Entrate: %.2f€ | Rimanente: %.2f€" % (
+                pippo_state.get("monthly_budget", 0.0),
+                pippo_state.get("spent", 0.0),
+                pippo_state.get("income", 0.0),
+                pippo_state.get("remaining", 0.0),
+            ),
+            "- Budget giornaliero: %.2f€ | Giorni rimasti: %s" % (
+                pippo_state.get("daily_budget", 0.0),
+                pippo_state.get("days_left", "?"),
+            ),
+            "- Disattivato: %s" % ("sì" if pippo_state.get("deactivated") else "no"),
+        ]
+        if pippo_state.get("top_categories"):
+            top = ", ".join(f"{k}: {v:.2f}€" for k, v in pippo_state["top_categories"].items())
+            state_lines.append(f"- Spese per categoria: {top}")
+        parts.append(f"<|system|>\n" + "\n".join(state_lines) + "</s>")
     if tools_info:
         parts.append(f"<|system|>\nStrumenti disponibili:\n{tools_info}</s>")
     if context:
@@ -367,6 +342,30 @@ async def stream_response(prompt: str, max_tokens: int = 512, temperature: float
             yield char
 
 
+def get_pippo_prompt_state() -> Optional[Dict[str, Any]]:
+    """Snapshot of Pippo's survival state, used to ground the system prompt."""
+    try:
+        from api.services.budget_tracker import get_pippo_state
+        return get_pippo_state()
+    except Exception as e:
+        logger.warning(f"Pippo state unavailable: {e}")
+        return None
+
+
+def ai_backend_ready() -> bool:
+    """True when an LLM backend can actually answer (Ollama reachable or model loaded)."""
+    if os.getenv("USE_OLLAMA", "false").lower() == "true":
+        try:
+            import httpx
+            base_url = os.getenv("OLLAMA_URL", "http://localhost:11434")
+            with httpx.Client(timeout=2.0) as client:
+                resp = client.get(f"{base_url}/api/tags")
+                return resp.status_code == 200
+        except Exception:
+            return False
+    return _model is not None
+
+
 @app.get("/", response_model=dict)
 async def root():
     return {"message": "Italian LLM API", "docs": "/docs", "status": "running", "backend": _backend}
@@ -411,38 +410,26 @@ async def chat(request: ChatRequest):
         except Exception as e:
             logger.warning(f"RAG failed: {e}")
 
-    tools_used = []
-    tool_results = []
-
+    tools_used: List[str] = []
+    web_context = ""
     if request.use_web_search:
         tools_used.append("web_search")
-        tool_results.append(f"Risultati ricerca web:\n{tool_web_search(request.message)}")
+        web_context = f"Risultati ricerca web:\n{tool_web_search(request.message)}"
 
-    if any(word in request.message.lower() for word in ["calcola", "quanto fa", "risolvi", "calcola"]):
-        expr = re.sub(r"[^\d+\-*/().%s ]", "", request.message)
-        if expr:
-            tools_used.append("calculator")
-            tool_results.append(f"Calcolo: {tool_calculator(expr)}")
+    auto_tools, auto_results, tools_info = run_tools(request.message)
+    tools_used.extend(auto_tools)
 
-    if any(word in request.message.lower() for word in ["che ore sono", "data", "ora"]):
-        tools_used.append("datetime")
-        tool_results.append(tool_datetime())
-
-    if any(word in request.message.lower() for word in ["meteo", "tempo", "weather"]):
-        city_match = re.search(r"a\s+([A-Za-zÀ-ÿ\s]+)", request.message)
-        city = city_match.group(1) if city_match else "Roma"
-        tools_used.append("weather")
-        tool_results.append(tool_weather(city))
-
-    if any(word in request.message.lower() for word in ["notizie", "news"]):
-        tools_used.append("news")
-        tool_results.append(tool_news(request.message))
-
-    tools_info = "\n".join([f"- {name}: {TOOLS[name]['description']}" for name in tools_used])
-    tool_context = "\n\n".join(tool_results) if tool_results else ""
-
+    tool_context = "\n\n".join(filter(None, [web_context, auto_results]))
     full_context = "\n\n".join(filter(None, [context, tool_context]))
-    prompt = build_prompt(request.message, context=full_context, history=history, tools_info=tools_info)
+
+    pippo_state = get_pippo_prompt_state()
+    prompt = build_prompt(
+        request.message,
+        context=full_context,
+        history=history,
+        tools_info=tools_info,
+        pippo_state=pippo_state,
+    )
 
     response = generate_response(
         prompt,
@@ -480,18 +467,30 @@ async def chat_stream(request: ChatRequest):
         except Exception as e:
             logger.warning(f"RAG failed: {e}")
 
-    tools_info = ""
-    tool_results = []
+    auto_tools, auto_results, tools_info = run_tools(request.message)
     if request.use_web_search:
-        tool_results.append(f"Risultati ricerca web:\n{tool_web_search(request.message)}")
-        tools_info += "\n- web_search: Cerca informazioni su internet"
+        tools_info = ("- web_search: Cerca informazioni su internet\n" + tools_info).strip()
+        auto_results = "\n\n".join(
+            filter(None, [f"Risultati ricerca web:\n{tool_web_search(request.message)}", auto_results])
+        )
 
-    full_context = "\n\n".join(filter(None, [context, "\n\n".join(tool_results)]))
-    prompt = build_prompt(request.message, context=full_context, history=history, tools_info=tools_info)
+    full_context = "\n\n".join(filter(None, [context, auto_results]))
+    pippo_state = get_pippo_prompt_state()
+    prompt = build_prompt(
+        request.message,
+        context=full_context,
+        history=history,
+        tools_info=tools_info,
+        pippo_state=pippo_state,
+    )
 
     async def generate():
+        chunks: List[str] = []
         async for chunk in stream_response(prompt, request.max_tokens, request.temperature):
+            chunks.append(chunk)
             yield chunk
+        history.append({"user": request.message, "assistant": "".join(chunks)})
+        _conversations[conv_id] = history[-20:]
 
     return StreamingResponse(generate(), media_type="text/plain")
 
@@ -573,8 +572,10 @@ async def get_budget_status():
 async def get_budget_advice():
     from api.services.budget_tracker import get_advice
     try:
-        advice = get_advice()
-        return advice
+        model_fn = None
+        if ai_backend_ready():
+            model_fn = lambda prompt: generate_response(prompt, max_tokens=256, temperature=0.6)
+        return get_advice(model_fn=model_fn)
     except Exception as e:
         logger.error(f"Budget advice failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -638,19 +639,6 @@ async def get_budget_deactivation():
         return check_deactivation()
     except Exception as e:
         logger.error(f"Budget deactivation check failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/budget/reset")
-async def reset_budget(request: BudgetResetRequest):
-    if not request.confirm:
-        raise HTTPException(status_code=400, detail="Devi confermare il reset con confirm=true")
-    from api.services.budget_tracker import reset_month
-    try:
-        reset_month()
-        return {"status": "reset", "message": "Budget resettato per il nuovo mese"}
-    except Exception as e:
-        logger.error(f"Budget reset failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
