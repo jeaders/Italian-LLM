@@ -3,6 +3,7 @@ import re
 import json
 from datetime import datetime
 from typing import Optional, AsyncGenerator, List, Dict, Any
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -20,16 +21,35 @@ from api.services.tools import (
     tool_datetime,
     tool_unit_converter,
 )
-from api.services.pippo_brain import PIPPO_SYSTEM, intro_prompt, live_tick
+from api.services.pippo_brain import (
+    PIPPO_SYSTEM,
+    get_feed,
+    get_report,
+    intro_prompt,
+    live_tick,
+    loop_status,
+    reflection,
+    start_autonomous_loop,
+)
 
 load_dotenv()
 
 logger.add("logs/api.log", rotation="10 MB", encoding="utf-8")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Pippo vive da solo: il loop autonomo gira in background finché l'API è attiva.
+    # Disabilitabile con PIPPO_AUTONOMOUS=false, mai avviato sotto pytest.
+    if "PYTEST_CURRENT_ID" not in os.environ and start_autonomous_loop():
+        logger.info("Pippo autonomous loop started (tick every %.0fs)", loop_status()["interval_seconds"])
+    yield
+
+
 app = FastAPI(
     title="Italian LLM API",
     description="API per il Large Language Model Italiano",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -703,3 +723,42 @@ async def pippo_complete(request: CompleteRequest):
     except Exception as e:
         logger.error(f"Pippo complete failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/pippo/feed")
+async def pippo_feed(limit: int = 30):
+    """Recent autonomous events of Pippo's life, newest first."""
+    return {"events": get_feed(limit)}
+
+
+@app.get("/pippo/report")
+async def pippo_report(scope: str = "day"):
+    """Survival aggregates: scope = day | week | month."""
+    if scope not in ("day", "week", "month"):
+        raise HTTPException(status_code=400, detail="scope deve essere day, week o month")
+    try:
+        report = get_report(scope)
+        if scope == "week":
+            report = {**report, "days": report.get("days", [])[-7:]}
+        return report
+    except Exception as e:
+        logger.error(f"Pippo report failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/pippo/reflection")
+async def pippo_reflection(scope: str = "week"):
+    """Reflection prompt + deterministic fallback for day/week/month."""
+    if scope not in ("day", "week", "month"):
+        raise HTTPException(status_code=400, detail="scope deve essere day, week o month")
+    try:
+        return reflection(scope)
+    except Exception as e:
+        logger.error(f"Pippo reflection failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/pippo/loop")
+async def pippo_loop():
+    """Status of the backend autonomous loop (Pippo lives without being asked)."""
+    return loop_status()

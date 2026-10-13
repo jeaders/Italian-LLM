@@ -14,6 +14,8 @@ BUDGET_FILE = DATA_DIR / "budget_tracker.json"
 
 MONTHLY_BUDGET = 100.0
 DEACTIVATION_THRESHOLD = -20.0
+MAX_MEALS_PER_DAY = 2
+MAX_ACTIONS_PER_DAY = 3
 
 ACTIONS = [
     {"id": "microtask", "label": "Microtask online", "potential_income": 5.0, "risk": "low", "description": "Completa survey e microtask su piattaforme italiane", "cost": 0},
@@ -79,6 +81,46 @@ def _fresh_period_state() -> Dict[str, Any]:
     }
 
 
+def _day_key(date_str: Optional[str]) -> Optional[str]:
+    if not date_str:
+        return None
+    return str(date_str)[:10]
+
+
+def _today_str() -> str:
+    return datetime.now().strftime("%Y-%m-%d")
+
+
+def _aggregate_days(budget: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    """Daily aggregates (spent/income/meals/actions) from a budget dict."""
+    days: Dict[str, Dict[str, Any]] = {}
+
+    def _entry(day: str) -> Dict[str, Any]:
+        return days.setdefault(day, {"spent": 0.0, "income": 0.0, "meals": 0, "actions": 0, "earned": 0.0})
+
+    for e in budget.get("expenses", []):
+        day = _day_key(e.get("date"))
+        if not day:
+            continue
+        entry = _entry(day)
+        entry["spent"] = round(entry["spent"] + e.get("amount", 0), 2)
+        if e.get("category") == "cibo":
+            entry["meals"] += 1
+    for i in budget.get("income", []):
+        day = _day_key(i.get("date"))
+        if not day:
+            continue
+        entry = _entry(day)
+        entry["income"] = round(entry["income"] + i.get("amount", 0), 2)
+        entry["earned"] = round(entry["earned"] + i.get("amount", 0), 2)
+    for a in budget.get("activity_log", []):
+        if a.get("result") == "success" and a.get("action") not in ("expense", "income"):
+            day = _day_key(a.get("date"))
+            if day:
+                _entry(day)["actions"] += 1
+    return {d: {k: (round(v, 2) if isinstance(v, float) else v) for k, v in agg.items()} for d, agg in sorted(days.items())}
+
+
 def _archive_month(budget: Dict[str, Any], month: Optional[str]) -> None:
     """Keep a compact summary of a closed month for history/streaks."""
     if not month:
@@ -90,6 +132,7 @@ def _archive_month(budget: Dict[str, Any], month: Optional[str]) -> None:
         "spent": round(sum(e["amount"] for e in budget.get("expenses", [])), 2),
         "income": round(sum(i["amount"] for i in budget.get("income", [])), 2),
         "expenses_count": len(budget.get("expenses", [])),
+        "days": _aggregate_days(budget),
         "closed_at": datetime.now().isoformat(),
     }
 
@@ -573,3 +616,75 @@ def get_activity_log(limit: int = 50) -> List[Dict[str, Any]]:
     budget = get_current_month_budget()
     log = budget.get("activity_log", [])
     return log[-limit:]
+
+
+def get_daily_aggregates(days: int = 7) -> List[Dict[str, Any]]:
+    """Daily aggregates for the last N days, including archived months."""
+    budget = get_current_month_budget()
+    merged: Dict[str, Dict[str, Any]] = {}
+    for month_data in budget.get("history", {}).values():
+        for day, agg in (month_data.get("days") or {}).items():
+            merged[day] = dict(agg)
+    for day, agg in _aggregate_days(budget).items():
+        merged[day] = {**merged.get(day, {}), **agg}
+    return [{"date": day, **merged[day]} for day in sorted(merged.keys())[-days:]]
+
+
+def get_day_report() -> Dict[str, Any]:
+    """What Pippo did today: meals, actions, money in/out."""
+    budget = get_current_month_budget()
+    today = _today_str()
+    log = [a for a in budget.get("activity_log", []) if _day_key(a.get("date")) == today]
+    actions = [a for a in log if a.get("action") not in ("expense", "income")]
+    successes = [a for a in actions if a.get("result") == "success"]
+    failures = [a for a in actions if a.get("result") == "failure"]
+    return {
+        "date": today,
+        "spent": round(sum(e["amount"] for e in budget.get("expenses", []) if _day_key(e.get("date")) == today), 2),
+        "income": round(sum(i["amount"] for i in budget.get("income", []) if _day_key(i.get("date")) == today), 2),
+        "meals": sum(1 for e in budget.get("expenses", []) if _day_key(e.get("date")) == today and e.get("category") == "cibo"),
+        "actions": actions,
+        "successes": len(successes),
+        "failures": len(failures),
+        "earned_today": budget.get("life_state", {}).get("earned_today", 0.0),
+    }
+
+
+def get_month_report() -> Dict[str, Any]:
+    """Month view: categories, daily bars, survival stats and end-of-month projection."""
+    budget = get_current_month_budget()
+    by_cat = get_expenses_by_category()
+    by_src = get_income_by_source()
+    days = get_daily_aggregates(31)
+    log = budget.get("activity_log", [])
+    successes = [a for a in log if a.get("result") == "success" and a["action"] not in ("expense", "income")]
+    failures = [a for a in log if a.get("result") == "failure"]
+    spent = get_spent()
+    income = get_income()
+    now = datetime.now()
+    days_in_month = (now.replace(day=28) + timedelta(days=4)).day
+    days_elapsed = max(now.day, 1)
+    daily_burn = round(spent / days_elapsed, 2)
+    projected = round(spent + daily_burn * max(days_in_month - now.day, 0), 2)
+    history = budget.get("history", {})
+    return {
+        "month": budget.get("current_month"),
+        "spent": spent,
+        "income": income,
+        "remaining": get_remaining(),
+        "by_category": by_cat,
+        "by_income_source": by_src,
+        "days": days,
+        "days_in_month": days_in_month,
+        "days_elapsed": days_elapsed,
+        "daily_burn": daily_burn,
+        "projected_spent": projected,
+        "survival": {
+            "alive_days": sum(1 for d in days if d["spent"] >= 0),
+            "total_days": len(days),
+            "actions_success": len(successes),
+            "actions_failed": len(failures),
+            "total_earned": income,
+            "months_archived": sorted(history.keys()),
+        },
+    }

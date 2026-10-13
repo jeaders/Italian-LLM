@@ -108,15 +108,30 @@
     </section>
 
     <section class="terminal-panel rounded-xl p-4">
-      <div class="flex items-center justify-between mb-3">
-        <p class="text-[11px] font-semibold uppercase tracking-widest terminal-muted">Azioni</p>
-        <button id="refreshActions" class="terminal-btn text-[10px] px-2 py-1 rounded-md">Aggiorna</button>
+      <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <span id="loopDot" class="w-2 h-2 rounded-full bg-slate-600"></span>
+          <p class="text-[11px] font-semibold uppercase tracking-widest terminal-muted">La giornata di Pippo</p>
+        </div>
+        <div class="flex gap-1">
+          <button data-scope="day" class="scope-btn terminal-btn text-[10px] px-2.5 py-1 rounded-md">Oggi</button>
+          <button data-scope="week" class="scope-btn terminal-btn text-[10px] px-2.5 py-1 rounded-md">Settimana</button>
+          <button data-scope="month" class="scope-btn terminal-btn text-[10px] px-2.5 py-1 rounded-md">Mese</button>
+        </div>
       </div>
-      <div id="actionsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+      <div id="reportPanel" class="space-y-3"></div>
     </section>
 
     <section class="terminal-panel rounded-xl p-4">
-      <p class="text-[11px] font-semibold uppercase tracking-widest terminal-muted mb-3">Opportunità</p>
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-[11px] font-semibold uppercase tracking-widest terminal-muted">🧠 Pippo sta facendo</p>
+        <span id="feedMeta" class="text-[10px] terminal-muted"></span>
+      </div>
+      <div id="liveFeed" class="space-y-0 max-h-72 overflow-y-auto scrollbar-thin"></div>
+    </section>
+
+    <section class="terminal-panel rounded-xl p-4">
+      <p class="text-[11px] font-semibold uppercase tracking-widest terminal-muted mb-3">Opportunità di guadagno (catalogo)</p>
       <div id="earningsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
     </section>
 
@@ -159,9 +174,12 @@
       container.prepend(banner);
     }
 
+    let currentState = null;
+
     async function loadStatus() {
       const res = await fetch(API_BASE + '/budget/status');
       const data = await res.json();
+      currentState = data;
       document.getElementById('credits').textContent = fmt(data.monthly_budget);
       document.getElementById('spent').textContent = '-' + fmt(data.spent);
       document.getElementById('income').textContent = '+' + fmt(data.income);
@@ -190,49 +208,141 @@
       return data;
     }
 
-    async function loadActions() {
-      const res = await fetch(API_BASE + '/budget/actions');
-      const data = await res.json();
-      const container = document.getElementById('actionsGrid');
-      const actions = data.actions || [];
-      if (!actions.length) {
-        container.innerHTML = '<div class="text-xs terminal-muted">Nessuna azione disponibile</div>';
-        return;
-      }
-      container.innerHTML = actions.map(a => {
-        const urgencyLabel = a.urgency === 'high' ? 'Alta' : a.urgency === 'medium' ? 'Media' : 'Bassa';
-        return `<div class="action-card rounded-xl p-3 flex flex-col gap-2">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-medium terminal-text">${escapeHtml(a.label)}</span>
-            <span class="text-[10px] terminal-muted">${urgencyLabel}</span>
-          </div>
-          <p class="text-[10px] terminal-muted leading-relaxed">${escapeHtml(a.description)}</p>
-          <div class="flex items-center justify-between mt-1">
-            <span class="text-[10px] terminal-green">+${fmt(a.potential_income)} potenziali</span>
-            <button data-action="${a.id}" class="terminal-btn text-[10px] px-3 py-1.5 rounded-md">Esegui</button>
+    let currentScope = 'day';
+
+    function bar(value, max, colorClass) {
+      const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
+      return `<div class="h-1.5 rounded-full bg-slate-800 overflow-hidden w-full"><div class="h-full ${colorClass} transition-all duration-500" style="width:${pct}%"></div></div>`;
+    }
+
+    function statCard(label, value, sub, colorClass) {
+      return `<div class="terminal-panel rounded-xl p-3">
+        <p class="text-[10px] uppercase tracking-widest terminal-muted mb-1">${label}</p>
+        <p class="text-base font-semibold ${colorClass}">${value}</p>
+        ${sub ? `<p class="text-[10px] terminal-muted mt-0.5">${sub}</p>` : ''}
+      </div>`;
+    }
+
+    function renderDayReport(r) {
+      const state = currentState || {};
+      return `
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          ${statCard('Speso oggi', '-' + fmt(r.spent || 0), '', 'terminal-red')}
+          ${statCard('Guadagnato oggi', '+' + fmt(r.income || 0), '', 'terminal-green')}
+          ${statCard('Pasti', r.meals || 0, 'max 2 al giorno', 'terminal-text')}
+          ${statCard('Azioni', (r.successes || 0) + ' ok / ' + (r.failures || 0) + ' no', 'max 3 al giorno', 'terminal-text')}
+        </div>
+        <div>
+          <p class="text-[10px] uppercase tracking-widest terminal-muted mb-2">Cosa ha deciso Pippo oggi</p>
+          <div class="space-y-1">
+            ${(r.actions || []).length ? r.actions.map(a => `
+              <div class="log-entry py-2 flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="text-xs terminal-text">${escapeHtml(a.details || a.action)}</div>
+                  <div class="text-[10px] terminal-muted">${new Date(a.date).toLocaleTimeString('it-IT')}</div>
+                </div>
+                <span class="text-[10px] shrink-0 ${a.result === 'success' ? 'terminal-green' : a.result === 'failure' ? 'terminal-red' : 'terminal-yellow'}">${a.result}</span>
+              </div>`).join('') : '<p class="text-xs terminal-muted">Nessuna decisione registrata oggi</p>'}
           </div>
         </div>`;
-      }).join('');
+    }
 
-      container.querySelectorAll('button[data-action]').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const actionId = btn.dataset.action;
-          btn.disabled = true;
-          const original = btn.textContent;
-          btn.textContent = '...';
-          try {
-            const res = await fetch(API_BASE + '/budget/actions/' + encodeURIComponent(actionId), { method: 'POST' });
-            const result = await res.json();
-            alert(result.message);
-            refreshAll();
-          } catch (e) {
-            alert('Errore: ' + e.message);
-          } finally {
-            btn.disabled = false;
-            btn.textContent = original;
-          }
-        });
-      });
+    function renderWeekReport(r) {
+      const days = (r.days || []).slice(-7);
+      const maxSpent = Math.max(...days.map(d => d.spent), 1);
+      const maxIncome = Math.max(...days.map(d => d.income), 1);
+      const avgSpent = days.length ? days.reduce((s, d) => s + d.spent, 0) / days.length : 0;
+      const avgIncome = days.length ? days.reduce((s, d) => s + d.income, 0) / days.length : 0;
+      return `
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          ${statCard('Media spesa/giorno', fmt(avgSpent), 'target: 3,33€', avgSpent > 3.33 ? 'terminal-red' : 'terminal-green')}
+          ${statCard('Media entrate/giorno', fmt(avgIncome), avgIncome > 0 ? '' : 'nessuna entrata', 'terminal-text')}
+          ${statCard('Speso settimana', fmt(days.reduce((s, d) => s + d.spent, 0)), '', 'terminal-red')}
+          ${statCard('Guadagnato settimana', fmt(days.reduce((s, d) => s + d.income, 0)), '', 'terminal-green')}
+        </div>
+        <div class="space-y-2">
+          ${days.map(d => `
+            <div class="flex items-center gap-3">
+              <span class="text-[10px] terminal-muted w-12 shrink-0">${d.date.slice(8)}/${d.date.slice(5, 7)}</span>
+              <div class="flex-1 space-y-1">
+                ${bar(d.spent, maxSpent, 'bg-terminal-red')}
+                ${bar(d.income, maxIncome, 'bg-terminal-green')}
+              </div>
+              <span class="text-[10px] terminal-muted w-24 text-right shrink-0">${d.meals || 0} pasti · ${d.actions || 0} az.</span>
+            </div>`).join('') || '<p class="text-xs terminal-muted">Nessun dato ancora</p>'}
+        </div>
+        <p class="text-[10px] terminal-muted">Rosso = spese · Verde = entrate</p>`;
+    }
+
+    function renderMonthReport(r) {
+      const cats = Object.entries(r.by_category || {}).sort((a, b) => b[1] - a[1]);
+      const maxCat = Math.max(...cats.map(c => c[1]), 1);
+      const s = r.survival || {};
+      return `
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+          ${statCard('Speso mese', fmt(r.spent || 0), 'su 100,00 €', 'terminal-red')}
+          ${statCard('Entrate mese', fmt(r.income || 0), '', 'terminal-green')}
+          ${statCard('Rimanenti', fmt(r.remaining || 0), '', (r.remaining || 0) < 25 ? 'terminal-yellow' : 'terminal-green')}
+          ${statCard('Proiezione fine mese', fmt(r.projected_spent || 0), 'ritmo ' + fmt(r.daily_burn || 0) + '/giorno', 'terminal-yellow')}
+        </div>
+        <div class="space-y-2">
+          <p class="text-[10px] uppercase tracking-widest terminal-muted">Spese per categoria</p>
+          ${cats.map(([k, v]) => `
+            <div class="flex items-center gap-3">
+              <span class="text-[10px] terminal-muted w-20 shrink-0 capitalize">${escapeHtml(k)}</span>
+              <div class="flex-1">${bar(v, maxCat, 'bg-terminal-yellow')}</div>
+              <span class="text-[10px] terminal-text w-16 text-right shrink-0">${fmt(v)}</span>
+            </div>`).join('') || '<p class="text-xs terminal-muted">Nessuna spesa registrata</p>'}
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          ${statCard('Azioni riuscite', s.actions_success || 0, '', 'terminal-green')}
+          ${statCard('Azioni fallite', s.actions_failed || 0, '', 'terminal-red')}
+          ${statCard('Mesi archiviati', (s.months_archived || []).length, (s.months_archived || []).join(', ') || '-', 'terminal-muted')}
+        </div>`;
+    }
+
+    async function loadReport(scope) {
+      currentScope = scope;
+      const res = await fetch(API_BASE + '/pippo/report?scope=' + scope);
+      if (!res.ok) throw new Error('report failed');
+      const r = await res.json();
+      const panel = document.getElementById('reportPanel');
+      if (scope === 'day') panel.innerHTML = renderDayReport(r);
+      else if (scope === 'week') panel.innerHTML = renderWeekReport(r);
+      else panel.innerHTML = renderMonthReport(r);
+    }
+
+    async function loadFeed() {
+      const res = await fetch(API_BASE + '/pippo/feed?limit=15');
+      if (!res.ok) throw new Error('feed failed');
+      const data = await res.json();
+      const events = data.events || [];
+      const container = document.getElementById('liveFeed');
+      container.innerHTML = events.length ? events.map(e => {
+        const color = e.amount > 0 ? 'terminal-green' : e.amount < 0 ? 'terminal-red' : 'terminal-muted';
+        const prefix = e.amount > 0 ? '+' : '';
+        return `<div class="log-entry py-2 flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="text-xs terminal-text">🧠 ${escapeHtml(e.text)}</div>
+            <div class="text-[10px] terminal-muted">${new Date(e.at).toLocaleString('it-IT')}</div>
+          </div>
+          ${e.amount ? `<span class="text-[11px] font-semibold ${color} shrink-0">${prefix}${fmt(e.amount)}</span>` : ''}
+        </div>`;
+      }).join('') : '<p class="text-xs terminal-muted">Pippo è appena stato attivato: il loop autonomo inizierà a breve.</p>';
+      document.getElementById('feedMeta').textContent = events.length ? 'ultimi ' + events.length + ' eventi' : '';
+    }
+
+    async function loadLoop() {
+      try {
+        const res = await fetch(API_BASE + '/pippo/loop');
+        if (!res.ok) return;
+        const data = await res.json();
+        const dot = document.getElementById('loopDot');
+        if (dot) {
+          dot.className = 'w-2 h-2 rounded-full ' + (data.running ? 'bg-terminal-green' : 'bg-slate-600');
+          dot.title = data.running ? 'Loop autonomo attivo: tick ogni ' + data.interval_seconds + 's' : 'Loop autonomo non attivo';
+        }
+      } catch (e) {}
     }
 
     async function loadEarnings() {
@@ -288,7 +398,9 @@
       try {
         await loadStatus();
         await loadVitalStatus();
-        await loadActions();
+        await loadReport(currentScope);
+        await loadFeed();
+        await loadLoop();
         await loadEarnings();
         await loadActivityLog();
         const banner = document.getElementById('offlineBanner');
@@ -299,10 +411,20 @@
       }
     }
 
-    document.getElementById('refreshActions').addEventListener('click', refreshAll);
-    document.getElementById('refreshLog').addEventListener('click', refreshAll);
+    document.getElementById('refreshLog')?.addEventListener('click', refreshAll);
+    document.querySelectorAll('.scope-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.scope-btn').forEach(b => b.classList.remove('text-neon-400'));
+        btn.classList.add('text-neon-400');
+        loadReport(btn.dataset.scope).catch(() => {});
+      });
+    });
+    document.querySelector('.scope-btn')?.classList.add('text-neon-400');
 
+    // La dashboard è in sola lettura: Pippo vive da solo (loop del backend),
+    // qui osserviamo. Refresh automatico ogni 5 secondi.
     refreshAll();
+    setInterval(refreshAll, 5000);
   </script>
 </body>
 </html>

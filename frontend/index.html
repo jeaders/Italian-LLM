@@ -637,36 +637,51 @@
       return data.text || '';
     }
 
-    async function pippoNarrate(prompt, fallback, meta = {}) {
-      typingIndicator();
-      try {
-        const text = (await pippoGenerate(prompt)).trim() || fallback;
-        removeTypingIndicator();
-        appendBubble('assistant', text, { ...meta, autonomous: true });
-        playSound('receive');
-        const history = (conversations[currentConversationId]?.history || []).concat([{ role: 'assistant', content: text, meta: { autonomous: true } }]);
-        saveConversation(currentConversationId, history);
-        return text;
-      } catch (e) {
-        removeTypingIndicator();
-        appendBubble('assistant', fallback, { ...meta, autonomous: true });
-        const history = (conversations[currentConversationId]?.history || []).concat([{ role: 'assistant', content: fallback, meta: { autonomous: true } }]);
-        saveConversation(currentConversationId, history);
-        return fallback;
-      }
+    // Anti-allucinazione: se il modello inventa importi che non esistono nei fatti,
+    // usiamo il testo deterministico invece della narrazione sbagliata.
+    function groundedCheck(text, facts) {
+      const amounts = (text.match(/\d+[.,]\d+/g) || []).map(s => s.replace(',', '.'));
+      if (!amounts.length) return true;
+      const known = new Set((facts.match(/\d+[.,]\d+/g) || []).map(s => s.replace(',', '.')));
+      return amounts.every(a => known.has(a));
     }
 
+    async function pippoNarrate(prompt, fallback, meta = {}, facts = '') {
+      typingIndicator();
+      let text = '';
+      try {
+        const raw = (await pippoGenerate(prompt)).trim();
+        if (raw && (!facts || groundedCheck(raw, facts))) text = raw;
+      } catch (e) {
+        text = '';
+      }
+      removeTypingIndicator();
+      const finalText = text || fallback;
+      appendBubble('assistant', finalText, { ...meta, autonomous: true });
+      playSound('receive');
+      const history = (conversations[currentConversationId]?.history || []).concat([{ role: 'assistant', content: finalText, meta: { autonomous: true } }]);
+      saveConversation(currentConversationId, history);
+      return finalText;
+    }
+
+    let pippoTickCount = 0;
     let pippoOfflineWarned = false;
 
     async function pippoTickOnce() {
       if (pippoBusy || document.hidden) return;
       pippoBusy = true;
       try {
-        const res = await fetch(API_BASE + '/pippo/tick', { method: 'POST' });
+        // Ogni 6 tick: invece del racconto del momento, il bilancio settimana/mese
+        const isReflection = (pippoTickCount > 0) && (pippoTickCount % 6 === 0);
+        pippoTickCount++;
+        const url = isReflection
+          ? API_BASE + '/pippo/reflection?scope=' + (pippoTickCount % 12 === 1 ? 'month' : 'week')
+          : API_BASE + '/pippo/tick';
+        const res = await fetch(url, { method: isReflection ? 'GET' : 'POST' });
         if (!res.ok) throw new Error('tick failed');
         const data = await res.json();
         pippoOfflineWarned = false;
-        await pippoNarrate(data.prompt, data.fallback, { autonomous: true });
+        await pippoNarrate(data.prompt, data.fallback, { autonomous: true, reflection: isReflection }, data.facts || '');
         updatePippoStatus();
       } catch (e) {
         if (!pippoOfflineWarned) {
@@ -686,15 +701,17 @@
       // Fallback offline: Pippo parla comunque, anche senza backend raggiungibile
       let prompt = "Sei Pippo, un'intelligenza artificiale italiana autonoma. Devi sopravvivere con 100 euro al mese. Presentati in prima persona, in massimo 2 frasi, e spiega che il tuo backend è spento quindi per ora non puoi vedere il tuo budget reale.";
       let fallback = "Ciao. Sono Pippo, un'intelligenza artificiale italiana: devo sopravvivere con 100€ al mese. Per ora il mio backend è spento (avvialo con `make inference` sulla porta 8000) quindi non vedo il mio budget reale — ma sono qui.";
+      let facts = "";
       try {
         const res = await fetch(API_BASE + '/pippo/intro');
         if (res.ok) {
           const data = await res.json();
           if (data.prompt) prompt = data.prompt;
           if (data.fallback) fallback = data.fallback;
+          if (data.facts) facts = data.facts;
         }
       } catch (e) {}
-      await pippoNarrate(prompt, fallback, { intro: true });
+      await pippoNarrate(prompt, fallback, { intro: true }, facts);
       updatePippoStatus();
     }
 

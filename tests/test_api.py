@@ -234,3 +234,46 @@ def test_pippo_complete_endpoint():
     resp = client.post("/pippo/complete", json={"prompt": "Racconta come stai"})
     assert resp.status_code == 200
     assert "text" in resp.json()
+
+
+def test_pippo_feed_records_events():
+    client.post("/pippo/tick")
+    resp = client.get("/pippo/feed")
+    assert resp.status_code == 200
+    events = resp.json()["events"]
+    assert events, "il feed deve contenere gli eventi del tick"
+    assert "at" in events[0] and "text" in events[0]
+
+
+def test_pippo_report_scopes():
+    for scope in ("day", "week", "month"):
+        resp = client.get(f"/pippo/report?scope={scope}")
+        assert resp.status_code == 200, scope
+        data = resp.json()
+        if scope == "day":
+            assert data["date"]
+        else:
+            assert "days" in data and "survival" in data
+            assert "by_category" in data
+
+
+def test_pippo_report_rejects_unknown_scope():
+    resp = client.get("/pippo/report?scope=year")
+    assert resp.status_code == 400
+
+
+def test_pippo_reflection_endpoint():
+    resp = client.get("/pippo/reflection?scope=week")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "Pippo" in data["prompt"]
+    assert data["facts"] and data["fallback"]
+    assert "€" in data["fallback"]
+
+
+def test_pippo_looks_grounded():
+    from api.services.pippo_brain import looks_grounded
+    facts = "Rimanenti: 98.80€\nSpeso oggi: 1.20€"
+    assert looks_grounded("Ho comprato pasta per 1.20€", facts) is True
+    assert looks_grounded("Mi restano 4.50€", facts) is False
+    assert looks_grounded("Oggi è una giornata tranquilla", facts) is True
