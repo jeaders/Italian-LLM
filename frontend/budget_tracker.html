@@ -135,8 +135,29 @@
   </div>
 
   <script>
-    const API_BASE = '';
+    function resolveApiBase() {
+      let override = null;
+      try {
+        override = new URLSearchParams(location.search).get('api') || localStorage.getItem('api_base');
+      } catch (e) {}
+      if (override) return override.replace(/\/+$/, '');
+      if (location.protocol === 'file:' || !location.hostname) return 'http://localhost:8000';
+      return '';
+    }
+    const API_BASE = resolveApiBase();
     const actionState = {};
+    let backendOfflineWarned = false;
+
+    function warnOffline() {
+      if (backendOfflineWarned) return;
+      backendOfflineWarned = true;
+      const banner = document.createElement('div');
+      banner.id = 'offlineBanner';
+      banner.className = 'terminal-panel rounded-xl p-4 border-terminal-red/40 text-xs terminal-muted';
+      banner.innerHTML = 'Backend non raggiungibile su <span class="terminal-text">' + escapeHtml(API_BASE || 'questo dominio') + '</span>. Avvialo con <code class="terminal-green">make inference</code> (porta 8000), oppure apri questa pagina con <code class="terminal-green">?api=https://tuo-backend</code> per usare un backend remoto.';
+      const container = document.querySelector('main > div, body > div') || document.body;
+      container.prepend(banner);
+    }
 
     async function loadStatus() {
       const res = await fetch(API_BASE + '/budget/status');
@@ -264,11 +285,18 @@
     }
 
     async function refreshAll() {
-      await loadStatus();
-      await loadVitalStatus();
-      await loadActions();
-      await loadEarnings();
-      await loadActivityLog();
+      try {
+        await loadStatus();
+        await loadVitalStatus();
+        await loadActions();
+        await loadEarnings();
+        await loadActivityLog();
+        const banner = document.getElementById('offlineBanner');
+        if (banner) banner.remove();
+        backendOfflineWarned = false;
+      } catch (e) {
+        warnOffline();
+      }
     }
 
     document.getElementById('refreshActions').addEventListener('click', refreshAll);

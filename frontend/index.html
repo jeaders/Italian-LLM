@@ -239,6 +239,11 @@
       </div>
       <div class="space-y-5">
         <div>
+          <label class="block text-xs text-slate-400 mb-2 font-medium">Backend Pippo (API)</label>
+          <input id="settingsApiBase" type="text" placeholder="http://localhost:8000" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500" />
+          <p class="text-[10px] text-slate-500 mt-2">Necessario per la sopravvivenza live. Vuoto = stesso dominio sulla porta 8000. Su un sito statico (es. Netlify) inserisci l'URL pubblico del backend, es. https://italian-llm.fly.dev</p>
+        </div>
+        <div>
           <label class="block text-xs text-slate-400 mb-2 font-medium">Provider</label>
           <select id="providerSelect" class="input-field w-full rounded-xl px-3 py-2.5 text-sm text-slate-100">
             <option value="auto">🤖 Automatico</option>
@@ -348,7 +353,7 @@
 
   <script>
     function resolveApiBase() {
-      // Override: ?api=http://host:port oppure localStorage['api_base']
+      // Override: ?api=https://host:port oppure localStorage['api_base']
       let override = null;
       try {
         override = new URLSearchParams(location.search).get('api') || localStorage.getItem('api_base');
@@ -358,7 +363,8 @@
       if (location.protocol === 'file:' || !location.hostname) return 'http://localhost:8000';
       return (location.protocol === 'https:' ? 'https://' : 'http://') + location.hostname + ':8000';
     }
-    const API_BASE = resolveApiBase();
+    let API_BASE = resolveApiBase();
+    function refreshApiBase() { API_BASE = resolveApiBase(); }
     const GROQ_KEY = localStorage.getItem('groq_api_key') || '';
     const GROQ_MODEL_KEY = 'groq_model';
     const GROQ_DEFAULT_MODEL = 'llama-3.3-70b-versatile';
@@ -538,6 +544,8 @@
 
     async function checkHealth() {
       const provider = settings.provider;
+      const target = (provider === 'groq' || provider === 'webllm') ? 'provider browser' : API_BASE;
+      if (backendLabel) backendLabel.title = target;
       if (provider === 'groq') {
         apiStatus.textContent = 'groq';
         backendLabel.textContent = 'Backend: Groq';
@@ -938,6 +946,7 @@
     function openSettings() {
       settingsModal.classList.remove('hidden');
       document.getElementById('settingsGroqKey').value = localStorage.getItem('groq_api_key') || '';
+      document.getElementById('settingsApiBase').value = localStorage.getItem('api_base') || '';
       document.getElementById('settingsGroqModel').value = groqModel;
       document.getElementById('settingsTemperature').value = settings.temperature;
       document.getElementById('tempValue').textContent = settings.temperature;
@@ -991,6 +1000,8 @@
       const webllmModel = document.getElementById('settingsWebLLMModel')?.value || 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
       const autoplay = document.getElementById('settingsAutoplay').checked;
       const tickSeconds = parseInt(document.getElementById('settingsTickSeconds').value, 10) || 25;
+      const apiBase = document.getElementById('settingsApiBase').value.trim().replace(/\/+$/, '');
+      if (apiBase) localStorage.setItem('api_base', apiBase); else localStorage.removeItem('api_base');
       localStorage.setItem('groq_api_key', groqKey);
       localStorage.setItem(GROQ_MODEL_KEY, model);
       localStorage.setItem('webllm_model', webllmModel);
@@ -998,6 +1009,11 @@
       settings = { provider, temperature, webSearch, rag, markdown, sounds, autoplay, tickSeconds };
       groqModel = model;
       closeSettingsModal();
+      refreshApiBase();
+      loadPippoPrompt();
+      checkHealth();
+      updatePippoStatus();
+      showToast('Backend Pippo: ' + API_BASE);
       checkHealth();
       showToast('Impostazioni salvate');
     });

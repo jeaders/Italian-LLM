@@ -2,6 +2,26 @@
   publish = "frontend"
   command = ""
 
+# Per far vivere Pippo anche sul sito statico, pubblica il backend (vedi README,
+# sezione Deployment) e decommenta qui sotto sostituendo l'host:
+# [[redirects]]
+#   from = "/budget/*"
+#   to = "https://IL-TUO-BACKEND/budget/:splat"
+#   status = 200
+#   force = true
+#
+# [[redirects]]
+#   from = "/pippo/*"
+#   to = "https://IL-TUO-BACKEND/pippo/:splat"
+#   status = 200
+#   force = true
+#
+# [[redirects]]
+#   from = "/chat"
+#   to = "https://IL-TUO-BACKEND/chat"
+#   status = 200
+#   force = true
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

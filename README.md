@@ -220,9 +220,29 @@ tool routing, the safe calculator and Pippo's autonomous loop (daily limits, dea
 | **Docker** | `docker-compose up --build` serves the API; open the frontend pages from `frontend/` |
 | **Fly.io** | `flyctl launch && flyctl deploy` |
 | **HuggingFace Spaces** | Gradio/Streamlit entrypoints in `frontend/` and `space/` |
-| **Netlify (static)** | Publishes `frontend/` with no build step. Note: the Pippo dashboard calls
-  `/budget/*` on its own origin, so it needs the API served from the same origin (or a proxy) —
-  chat works standalone via Groq/WebLLM. |
+| **Netlify (static)** | Publishes `frontend/` with no build step. Chat works standalone (Groq/WebLLM), but Pippo's autonomous life needs the API: either proxy `/budget/*`, `/pippo/*` and `/chat` to a public backend (commented example in `netlify.toml`), or set the backend URL in *Settings → Backend Pippo (API)*. Note: the Pippo dashboard calls `/budget/*` on its own origin, so it needs the API served from the same origin (or a proxy) too. |
+
+### Public backend for Pippo (any static host)
+
+The API is a plain FastAPI app — publish it anywhere, then connect the frontend:
+
+```bash
+# Fly.io example (Dockerfile and requirements.txt are in deploy/)
+flyctl launch --dockerfile deploy/Dockerfile --region fra    # no deploy yet
+flyctl volumes create pippo_data --size 1 --region fra
+flyctl deploy
+
+# mount the volume on /app/data so data/budget/budget_tracker.json survives restarts
+# (add [mounts] destination = "/app/data" to the generated fly.toml)
+```
+
+Then pick **one** of:
+1. **Netlify proxy**: uncomment the redirects in `netlify.toml` with your backend host — same-origin, no CORS, works for the dashboard too.
+2. **Frontend setting**: open the site → ⚙️ Impostazioni → *Backend Pippo (API)* →
+   `https://your-app.fly.dev`. Saved in `localStorage`, and `?api=<url>` works too.
+
+Without a reachable backend, Pippo still introduces himself and explains how to start the API —
+he just can't eat, earn or narrate his life.
 
 ## 📁 Project structure
 
