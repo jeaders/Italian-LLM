@@ -90,6 +90,15 @@ open frontend/index.html
 open frontend/budget_tracker.html
 ```
 
+Frontend notes:
+- The chat UI resolves the API to `localhost:8000` when opened as a file, and accepts an
+  override (`?api=https://your-api.example.com`, or `localStorage['api_base']`). Pippo greets you
+  even if the API is down, and the autonomous loop tells you how to start it.
+- **Voice input** requires a secure context: serve the frontend from `localhost` (e.g.
+  `python -m http.server 3000 --directory frontend`) or HTTPS — not `file://`.
+- The Pippo budget dashboard (`budget_tracker.html`) calls `/budget/*` on its own origin: for the
+  static-only deployment, serve both the API and the frontend from the same origin (see Deployment).
+
 ### Option 2 — full local install
 
 ```bash

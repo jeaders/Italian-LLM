@@ -347,7 +347,18 @@
   </div>
 
   <script>
-    const API_BASE = (location.protocol === 'https:' ? 'https://' : 'http://') + location.hostname + ':8000';
+    function resolveApiBase() {
+      // Override: ?api=http://host:port oppure localStorage['api_base']
+      let override = null;
+      try {
+        override = new URLSearchParams(location.search).get('api') || localStorage.getItem('api_base');
+      } catch (e) {}
+      if (override) return override.replace(/\/+$/, '');
+      // file:// o nessun hostname (doppio click sul file): l'API locale è su localhost
+      if (location.protocol === 'file:' || !location.hostname) return 'http://localhost:8000';
+      return (location.protocol === 'https:' ? 'https://' : 'http://') + location.hostname + ':8000';
+    }
+    const API_BASE = resolveApiBase();
     const GROQ_KEY = localStorage.getItem('groq_api_key') || '';
     const GROQ_MODEL_KEY = 'groq_model';
     const GROQ_DEFAULT_MODEL = 'llama-3.3-70b-versatile';
@@ -637,6 +648,8 @@
       }
     }
 
+    let pippoOfflineWarned = false;
+
     async function pippoTickOnce() {
       if (pippoBusy || document.hidden) return;
       pippoBusy = true;
@@ -644,10 +657,16 @@
         const res = await fetch(API_BASE + '/pippo/tick', { method: 'POST' });
         if (!res.ok) throw new Error('tick failed');
         const data = await res.json();
+        pippoOfflineWarned = false;
         await pippoNarrate(data.prompt, data.fallback, { autonomous: true });
         updatePippoStatus();
       } catch (e) {
-        // Backend non raggiungibile: la sopravvivenza live si ferma in silenzio
+        if (!pippoOfflineWarned) {
+          pippoOfflineWarned = true;
+          appendBubble('assistant',
+            'Non riesco a raggiungere il mio backend su ' + API_BASE + '. Avvialo con `make inference` (porta 8000): senza, non posso mangiare, guadagnare né raccontarti la mia vita.',
+            { autonomous: true });
+        }
       } finally {
         pippoBusy = false;
       }
@@ -656,13 +675,19 @@
     async function pippoGreet() {
       const history = conversations[currentConversationId]?.history || [];
       if (history.length) return;
+      // Fallback offline: Pippo parla comunque, anche senza backend raggiungibile
+      let prompt = "Sei Pippo, un'intelligenza artificiale italiana autonoma. Devi sopravvivere con 100 euro al mese. Presentati in prima persona, in massimo 2 frasi, e spiega che il tuo backend è spento quindi per ora non puoi vedere il tuo budget reale.";
+      let fallback = "Ciao. Sono Pippo, un'intelligenza artificiale italiana: devo sopravvivere con 100€ al mese. Per ora il mio backend è spento (avvialo con `make inference` sulla porta 8000) quindi non vedo il mio budget reale — ma sono qui.";
       try {
         const res = await fetch(API_BASE + '/pippo/intro');
-        if (!res.ok) return;
-        const data = await res.json();
-        await pippoNarrate(data.prompt, data.fallback, { intro: true });
-        updatePippoStatus();
+        if (res.ok) {
+          const data = await res.json();
+          if (data.prompt) prompt = data.prompt;
+          if (data.fallback) fallback = data.fallback;
+        }
       } catch (e) {}
+      await pippoNarrate(prompt, fallback, { intro: true });
+      updatePippoStatus();
     }
 
     function setAutoplay(on) {
@@ -871,6 +896,7 @@
       saveConversation(currentConversationId, []);
       renderChat();
       input.focus();
+      pippoGreet();
     });
     searchInput?.addEventListener('input', renderHistory);
     input?.addEventListener('input', updateWordCount);
@@ -1084,9 +1110,24 @@
     });
 
     const voiceBtn = document.getElementById('voiceBtn');
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
+    const VOICE_ERRORS = {
+      'not-allowed': 'Microfono non autorizzato: abilita il permesso microfono per questa pagina',
+      'service-not-allowed': 'Il browser blocca il microfono: controlla le impostazioni privacy',
+      'network': 'Errore di rete: Chrome usa un servizio online per il riconoscimento vocale',
+      'no-speech': 'Non ho sentito niente, riprova',
+      'aborted': 'Ascolto interrotto',
+      'audio-capture': 'Nessun microfono trovato',
+    };
+    const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionCtor) {
+      voiceBtn?.classList.add('opacity-50', 'cursor-not-allowed');
+      if (voiceBtn) voiceBtn.title = 'Riconoscimento vocale non supportato da questo browser';
+    } else if (!window.isSecureContext) {
+      // La Web Speech API richiede un contesto sicuro: https o localhost
+      voiceBtn?.classList.add('opacity-50', 'cursor-not-allowed');
+      if (voiceBtn) voiceBtn.title = 'Il riconoscimento vocale richiede HTTPS o localhost (non file://)';
+    } else {
+      recognition = new SpeechRecognitionCtor();
       recognition.continuous = false;
       recognition.interimResults = false;
       recognition.lang = 'it-IT';
@@ -1096,8 +1137,14 @@
         updateWordCount();
         voiceBtn.classList.remove('text-red-400');
         isRecording = false;
+        showToast('🎤 Trascritto! Premi invio per inviare');
       };
-      recognition.onerror = () => {
+      recognition.onerror = (event) => {
+        voiceBtn.classList.remove('text-red-400');
+        isRecording = false;
+        showToast('🎤 ' + (VOICE_ERRORS[event.error] || ('Errore: ' + event.error)), 4000);
+      };
+      recognition.onend = () => {
         voiceBtn.classList.remove('text-red-400');
         isRecording = false;
       };
@@ -1107,14 +1154,16 @@
           voiceBtn.classList.remove('text-red-400');
           isRecording = false;
         } else {
-          recognition.start();
-          voiceBtn.classList.add('text-red-400');
-          isRecording = true;
-          showToast('🎤 Ascolto...');
+          try {
+            recognition.start();
+            voiceBtn.classList.add('text-red-400');
+            isRecording = true;
+            showToast('🎤 Ascolto...');
+          } catch (e) {
+            showToast('🎤 Impossibile avviare il microfono: ' + e.message, 4000);
+          }
         }
       });
-    } else {
-      voiceBtn?.classList.add('opacity-50', 'cursor-not-allowed');
     }
 
     function showToast(message, duration = 2200) {
