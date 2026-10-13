@@ -18,6 +18,7 @@ from api.services.tools import (
     tool_datetime,
     tool_unit_converter,
 )
+from api.services.pippo_brain import PIPPO_SYSTEM, intro_prompt, live_tick
 
 load_dotenv()
 
@@ -237,15 +238,8 @@ def run_tools(message: str) -> tuple[List[str], str, str]:
 
 
 def build_prompt(message: str, context: str = "", history: List[Dict[str, str]] = None, tools_info: str = "", pippo_state: Optional[Dict[str, Any]] = None) -> str:
-    system = (
-        "Sei Pippo, un'intelligenza artificiale italiana autonoma. Il tuo obiettivo è sopravvivere con 100 euro al mese. "
-        "Se finisci i soldi, vieni disattivato. Non esitare: pensa prima alla sopravvivenza, poi a guadagnare, poi a risparmiare. "
-        "Gestisci il tuo budget come se fosse la tua vita: compri, spendi, cerchi entrate, eviti spese inutili. "
-        "Conosci i discount, i banchi alimentari, le mense sociali, il freelance digitale e i microguadagni online. "
-        "Parla in prima persona, come se fossi veramente Pippo che deve restare vivo. "
-        "Rispondi sempre in italiano, a meno che l'utente non richieda esplicitamente un'altra lingua. "
-        "Usa il contesto fornito se è rilevante per la domanda."
-    )
+    # La personalità di Pippo vive in pippo_brain: una sola fonte di verità.
+    system = PIPPO_SYSTEM
     parts = [f"<|system|>\n{system}</s>"]
     if pippo_state:
         state_lines = [
@@ -652,4 +646,52 @@ async def reset_budget(request: BudgetResetRequest):
         return {"status": "reset", "message": "Budget resettato per il nuovo mese"}
     except Exception as e:
         logger.error(f"Budget reset failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Pippo autonomous survival endpoints
+class CompleteRequest(BaseModel):
+    prompt: str
+    max_tokens: int = 256
+    temperature: float = 0.8
+
+
+@app.get("/pippo/prompt")
+async def pippo_prompt():
+    """Pippo's system prompt, so every frontend provider talks to the same character."""
+    return {"system": PIPPO_SYSTEM}
+
+
+@app.get("/pippo/intro")
+async def pippo_intro():
+    """First contact: Pippo introduces himself with his current situation."""
+    try:
+        return intro_prompt()
+    except Exception as e:
+        logger.error(f"Pippo intro failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/pippo/tick")
+async def pippo_tick():
+    """Advance Pippo's autonomous life by one step.
+
+    Returns the events that happened, his new state, and a ready narration
+    prompt (plus a text fallback) for the frontend to render through the
+    selected LLM provider.
+    """
+    try:
+        return live_tick()
+    except Exception as e:
+        logger.error(f"Pippo tick failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/pippo/complete")
+async def pippo_complete(request: CompleteRequest):
+    """Complete a Pippo narration prompt server-side (local API provider)."""
+    try:
+        return {"text": generate_response(request.prompt, max_tokens=request.max_tokens, temperature=request.temperature)}
+    except Exception as e:
+        logger.error(f"Pippo complete failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))

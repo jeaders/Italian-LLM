@@ -75,6 +75,7 @@ def _fresh_period_state() -> Dict[str, Any]:
         "deactivation_date": None,
         "vital_status": "alive",
         "last_action_date": None,
+        "life_state": {"day": datetime.now().strftime("%Y-%m"), "meals": 0, "actions": 0, "earned_today": 0.0},
     }
 
 

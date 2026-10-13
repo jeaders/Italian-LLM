@@ -173,6 +173,7 @@
          <span id="backendLabel" class="hidden md:inline text-xs text-slate-400">Sistema: -</span>
         <span id="toolBadge" class="hidden px-2 py-0.5 rounded-lg bg-slate-800 text-slate-200 text-[10px]"></span>
          <button id="focusModeBtn" class="pill text-xs px-2.5 py-1.5 rounded-lg text-slate-300" title="Modalità focus">🎯</button>
+        <button id="autoplayBtn" class="pill text-xs px-2.5 py-1.5 rounded-lg text-slate-300 opacity-50" title="Sopravvivenza live: Pippo vive e parla da solo">🧠</button>
         <button id="settingsBtn" class="pill text-xs px-2.5 py-1.5 rounded-lg text-slate-300" title="Impostazioni">⚙️</button>
       </div>
     </header>
@@ -290,6 +291,14 @@
           <span class="text-xs text-slate-300">Suoni</span>
           <input id="settingsSounds" type="checkbox" class="accent-brand-500 w-4 h-4" />
         </div>
+        <div class="flex items-center justify-between py-2">
+          <span class="text-xs text-slate-300">Sopravvivenza live (Pippo autonomo)</span>
+          <input id="settingsAutoplay" type="checkbox" class="accent-brand-500 w-4 h-4" />
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-2 font-medium">Pippo agisce ogni: <span id="tickValue">25</span>s</label>
+          <input id="settingsTickSeconds" type="range" min="8" max="120" step="1" value="25" class="w-full accent-brand-500" />
+        </div>
       </div>
       <button id="saveSettings" class="mt-6 w-full bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium py-2.5 rounded-xl transition-all hover:scale-[1.02]">Salva impostazioni</button>
     </div>
@@ -346,8 +355,23 @@
     let currentConversationId = 'default';
     let conversations = JSON.parse(localStorage.getItem('llm_conversations') || '{}');
     let settings = JSON.parse(localStorage.getItem('llm_settings') || '{}');
-    const defaultSettings = { provider: 'auto', temperature: 0.7, webSearch: false, rag: true, markdown: true, sounds: false };
+    const defaultSettings = { provider: 'auto', temperature: 0.7, webSearch: false, rag: true, markdown: true, sounds: false, autoplay: false, tickSeconds: 25 };
     settings = { ...defaultSettings, ...settings };
+
+    let pippoSystem = null;
+    const PIPPO_SYSTEM_FALLBACK = `Sei Pippo, un'intelligenza artificiale italiana autonoma. Il tuo obiettivo è sopravvivere con 100 euro al mese. Se finisci i soldi, vieni disattivato. Parla in prima persona, in italiano, come se fossi veramente Pippo che deve restare vivo.`;
+
+    async function loadPippoPrompt() {
+      try {
+        const res = await fetch(API_BASE + '/pippo/prompt');
+        if (res.ok) {
+          const data = await res.json();
+          pippoSystem = data.system || PIPPO_SYSTEM_FALLBACK;
+          return;
+        }
+      } catch (e) {}
+      pippoSystem = PIPPO_SYSTEM_FALLBACK;
+    }
 
     let webLLMEngine = null;
     let webLLMReady = false;
@@ -440,6 +464,12 @@
       bubble.innerHTML = isMarkdown ? renderMarkdown(text) : escapeHtml(text);
       row.appendChild(bubble);
 
+      if (meta?.autonomous) {
+        const tag = document.createElement('div');
+        tag.className = 'mt-1 text-[10px] text-neon-400/80';
+        tag.textContent = '🧠 Pippo autonomo';
+        row.appendChild(tag);
+      }
       if (meta?.tools_used?.length) {
         const tools = document.createElement('div');
         tools.className = 'mt-1 flex flex-wrap gap-1 ' + (role === 'user' ? 'justify-end' : 'justify-start');
@@ -542,6 +572,115 @@
       }
     }
 
+    // ─── Pippo autonomous survival ───────────────────────────────────────────
+    let pippoTimer = null;
+    let pippoBusy = false;
+
+    async function pippoGenerate(userPrompt) {
+      const provider = settings.provider;
+      const temperature = settings.temperature || 0.7;
+      const groqKey = (document.getElementById('settingsGroqKey')?.value || GROQ_KEY || '').trim();
+      const system = pippoSystem || PIPPO_SYSTEM_FALLBACK;
+
+      if (provider === 'groq' || (provider === 'auto' && groqKey)) {
+        if (!groqKey) throw new Error('Inserisci la API key di Groq nelle impostazioni');
+        const model = document.getElementById('settingsGroqModel')?.value || groqModel;
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + groqKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: system },
+              { role: 'user', content: userPrompt },
+            ],
+            max_tokens: 200,
+            temperature,
+          }),
+        });
+        if (!res.ok) throw new Error('Groq ' + res.status);
+        const data = await res.json();
+        return data.choices?.[0]?.message?.content || '';
+      }
+      if (provider === 'webllm') {
+        return webllmChat([
+          { role: 'system', content: system },
+          { role: 'user', content: userPrompt },
+        ], temperature);
+      }
+      const res = await fetch(API_BASE + '/pippo/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: userPrompt, max_tokens: 200, temperature }),
+      });
+      if (!res.ok) throw new Error('Backend non raggiungibile: la sopravvivenza live richiede l\'API attiva');
+      const data = await res.json();
+      return data.text || '';
+    }
+
+    async function pippoNarrate(prompt, fallback, meta = {}) {
+      typingIndicator();
+      try {
+        const text = (await pippoGenerate(prompt)).trim() || fallback;
+        removeTypingIndicator();
+        appendBubble('assistant', text, { ...meta, autonomous: true });
+        playSound('receive');
+        const history = (conversations[currentConversationId]?.history || []).concat([{ role: 'assistant', content: text, meta: { autonomous: true } }]);
+        saveConversation(currentConversationId, history);
+        return text;
+      } catch (e) {
+        removeTypingIndicator();
+        appendBubble('assistant', fallback, { ...meta, autonomous: true });
+        const history = (conversations[currentConversationId]?.history || []).concat([{ role: 'assistant', content: fallback, meta: { autonomous: true } }]);
+        saveConversation(currentConversationId, history);
+        return fallback;
+      }
+    }
+
+    async function pippoTickOnce() {
+      if (pippoBusy || document.hidden) return;
+      pippoBusy = true;
+      try {
+        const res = await fetch(API_BASE + '/pippo/tick', { method: 'POST' });
+        if (!res.ok) throw new Error('tick failed');
+        const data = await res.json();
+        await pippoNarrate(data.prompt, data.fallback, { autonomous: true });
+        updatePippoStatus();
+      } catch (e) {
+        // Backend non raggiungibile: la sopravvivenza live si ferma in silenzio
+      } finally {
+        pippoBusy = false;
+      }
+    }
+
+    async function pippoGreet() {
+      const history = conversations[currentConversationId]?.history || [];
+      if (history.length) return;
+      try {
+        const res = await fetch(API_BASE + '/pippo/intro');
+        if (!res.ok) return;
+        const data = await res.json();
+        await pippoNarrate(data.prompt, data.fallback, { intro: true });
+        updatePippoStatus();
+      } catch (e) {}
+    }
+
+    function setAutoplay(on) {
+      settings.autoplay = on;
+      localStorage.setItem('llm_settings', JSON.stringify(settings));
+      const btn = document.getElementById('autoplayBtn');
+      if (btn) {
+        btn.classList.toggle('opacity-50', !on);
+        btn.classList.toggle('text-neon-400', on);
+        btn.title = on ? 'Sopravvivenza live attiva — clicca per fermare Pippo' : 'Sopravvivenza live spenta — clicca per far vivere Pippo da solo';
+      }
+      if (pippoTimer) { clearInterval(pippoTimer); pippoTimer = null; }
+      if (on) {
+        const seconds = Math.max(8, settings.tickSeconds || 25);
+        pippoTimer = setInterval(pippoTickOnce, seconds * 1000);
+      }
+    }
+
     async function sendMessage(text) {
       const message = text || input.value.trim();
       if (!message) return;
@@ -564,7 +703,15 @@
           const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
             method: 'POST',
             headers: { 'Authorization': 'Bearer ' + groqKey, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model, messages: [{ role: 'user', content: message }], max_tokens: 512, temperature })
+            body: JSON.stringify({
+              model,
+              messages: [
+                { role: 'system', content: pippoSystem || PIPPO_SYSTEM_FALLBACK },
+                { role: 'user', content: message },
+              ],
+              max_tokens: 512,
+              temperature,
+            }),
           });
           if (!groqRes.ok) {
             const errText = await groqRes.text();
@@ -581,7 +728,10 @@
           const history = (conversations[currentConversationId]?.history || []).concat([{ role: 'user', content: message }, { role: 'assistant', content: reply }]);
           saveConversation(currentConversationId, history);
         } else if (provider === 'webllm') {
-          const reply = await webllmReply(message, temperature);
+          const reply = await webllmChat([
+            { role: 'system', content: pippoSystem || PIPPO_SYSTEM_FALLBACK },
+            { role: 'user', content: message },
+          ], temperature);
           removeTypingIndicator();
           appendBubble('assistant', reply);
           playSound('receive');
@@ -652,12 +802,12 @@
       }
     }
 
-    async function webllmReply(message, temperature) {
+    async function webllmChat(messages, temperature) {
       const model = document.getElementById('settingsWebLLMModel')?.value || 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
       try {
         const engine = await ensureWebLLM(model);
         const reply = await engine.chat.completions.create({
-          messages: [{ role: 'user', content: message }],
+          messages,
           max_tokens: 512,
           temperature,
           stream: false
@@ -769,6 +919,9 @@
       document.getElementById('settingsRag').checked = settings.rag;
       document.getElementById('settingsMarkdown').checked = settings.markdown;
       document.getElementById('settingsSounds').checked = settings.sounds;
+      document.getElementById('settingsAutoplay').checked = settings.autoplay;
+      document.getElementById('settingsTickSeconds').value = settings.tickSeconds || 25;
+      document.getElementById('tickValue').textContent = settings.tickSeconds || 25;
       document.getElementById('providerSelect').value = settings.provider;
       document.getElementById('settingsWebLLMModel').value = localStorage.getItem('webllm_model') || 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
       toggleProviderSettings(settings.provider);
@@ -810,11 +963,13 @@
       const sounds = document.getElementById('settingsSounds').checked;
       const provider = document.getElementById('providerSelect').value;
       const webllmModel = document.getElementById('settingsWebLLMModel')?.value || 'Llama-3.2-1B-Instruct-q4f32_1-MLC';
+      const autoplay = document.getElementById('settingsAutoplay').checked;
+      const tickSeconds = parseInt(document.getElementById('settingsTickSeconds').value, 10) || 25;
       localStorage.setItem('groq_api_key', groqKey);
       localStorage.setItem(GROQ_MODEL_KEY, model);
       localStorage.setItem('webllm_model', webllmModel);
-      localStorage.setItem('llm_settings', JSON.stringify({ provider, temperature, webSearch, rag, markdown, sounds }));
-      settings = { provider, temperature, webSearch, rag, markdown, sounds };
+      localStorage.setItem('llm_settings', JSON.stringify({ provider, temperature, webSearch, rag, markdown, sounds, autoplay, tickSeconds }));
+      settings = { provider, temperature, webSearch, rag, markdown, sounds, autoplay, tickSeconds };
       groqModel = model;
       closeSettingsModal();
       checkHealth();
@@ -979,6 +1134,17 @@
     }, 300);
     setInterval(checkHealth, 15000);
     setInterval(updatePippoStatus, 15000);
+
+    // Pippo autonomo: prompt condiviso, primo contatto e sopravvivenza live
+    loadPippoPrompt();
+    document.getElementById('autoplayBtn')?.addEventListener('click', () => setAutoplay(!settings.autoplay));
+    document.getElementById('settingsTickSeconds')?.addEventListener('input', (e) => {
+      document.getElementById('tickValue').textContent = e.target.value;
+    });
+    setTimeout(() => {
+      pippoGreet();
+      if (settings.autoplay) setAutoplay(true);
+    }, 1200);
     
     const currentVersion = document.querySelector('meta[name="version"]')?.content;
     const savedVersion = localStorage.getItem('app_version');

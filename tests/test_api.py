@@ -185,3 +185,52 @@ def test_wikipedia_tool_has_no_nameerror():
     from api.services.tools import tool_wikipedia
     result = tool_wikipedia("Pippo")
     assert "name 'httpx' is not defined" not in result
+
+
+def test_pippo_prompt_endpoint():
+    resp = client.get("/pippo/prompt")
+    assert resp.status_code == 200
+    assert "Pippo" in resp.json()["system"]
+
+
+def test_pippo_intro_endpoint():
+    resp = client.get("/pippo/intro")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["prompt"] and data["fallback"]
+    assert "Pippo" in data["prompt"]
+
+
+def test_pippo_lives_a_tick():
+    resp = client.post("/pippo/tick")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["events"], "Pippo must do something in a tick"
+    state = data["state"]
+    assert state["remaining"] == round(state["monthly_budget"] - state["spent"] + state["income"], 2)
+    assert "Pippo" in data["prompt"]
+    assert data["fallback"]
+
+
+def test_pippo_eats_at_most_twice_a_day():
+    for _ in range(6):
+        client.post("/pippo/tick")
+    budget = budget_tracker.load_budget()
+    meals = sum(1 for e in budget["expenses"] if e["category"] == "cibo")
+    assert meals <= 2, f"Pippo ate {meals} times in one day"
+
+
+def test_pippo_tick_when_deactivated():
+    client.post("/budget/expenses", json={"amount": 130.0, "category": "test", "description": "crollo"})
+    resp = client.post("/pippo/tick")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["events"] == []
+    assert data["state"]["deactivated"] is True
+    assert "disattivato" in data["fallback"].lower()
+
+
+def test_pippo_complete_endpoint():
+    resp = client.post("/pippo/complete", json={"prompt": "Racconta come stai"})
+    assert resp.status_code == 200
+    assert "text" in resp.json()
